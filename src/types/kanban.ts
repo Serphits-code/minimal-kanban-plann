@@ -10,6 +10,12 @@ export interface Tag {
   color: string
 }
 
+export interface Column {
+  id: string
+  name: string
+  order: number
+}
+
 export interface Card {
   id: string
   title: string
@@ -19,14 +25,16 @@ export interface Card {
   dueDate?: string
   scheduledDate?: string
   scheduledTime?: string
-  column: 'todo' | 'progress' | 'done'
+  column: string
   boardId: string
+  order: number
   createdAt: string
 }
 
 export interface Board {
   id: string
   name: string
+  columns: Column[]
   createdAt: string
 }
 

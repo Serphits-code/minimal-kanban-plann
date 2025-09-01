@@ -1,29 +1,40 @@
+import { useState } from 'react'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { KanbanColumn } from './KanbanColumn'
-import { Card as CardType } from '@/types/kanban'
+import { ColumnEditor } from './ColumnEditor'
+import { Card as CardType, Column } from '@/types/kanban'
+import { Button } from '@/components/ui/button'
+import { Settings } from '@phosphor-icons/react'
 
 interface KanbanBoardProps {
   boardId: string
   cards: CardType[]
-  onCreateCard: (columnId: 'todo' | 'progress' | 'done', title: string) => void
-  onMoveCard: (cardId: string, newColumn: 'todo' | 'progress' | 'done') => void
+  columns: Column[]
+  onCreateCard: (columnId: string, title: string) => void
+  onMoveCard: (cardId: string, newColumn: string, newOrder?: number) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onEditCard: (card: CardType) => void
+  onAddColumn: (name: string) => void
+  onUpdateColumn: (columnId: string, updates: Partial<Column>) => void
+  onDeleteColumn: (columnId: string) => void
+  onReorderColumns: (sourceIndex: number, destinationIndex: number) => void
 }
 
 export function KanbanBoard({ 
   boardId, 
   cards, 
+  columns,
   onCreateCard, 
   onMoveCard, 
   onUpdateCard, 
-  onEditCard 
+  onEditCard,
+  onAddColumn,
+  onUpdateColumn,
+  onDeleteColumn,
+  onReorderColumns
 }: KanbanBoardProps) {
+  const [showColumnEditor, setShowColumnEditor] = useState(false)
   const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(onMoveCard)
-
-  const todoCards = cards.filter(card => card.column === 'todo')
-  const progressCards = cards.filter(card => card.column === 'progress') 
-  const doneCards = cards.filter(card => card.column === 'done')
 
   if (!boardId) {
     return (
@@ -36,51 +47,57 @@ export function KanbanBoard({
     )
   }
 
+  const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
+
   return (
     <div className="flex-1 overflow-auto">
-      <div className="flex gap-6 p-6 min-w-max">
-        <KanbanColumn
-          title="A Fazer"
-          columnId="todo"
-          cards={todoCards}
-          onCreateCard={onCreateCard}
-          onEditCard={onEditCard}
-          onUpdateCard={onUpdateCard}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          draggedCardId={dragState.draggedCard?.id || null}
-        />
-        
-        <KanbanColumn
-          title="Em Progresso"
-          columnId="progress"
-          cards={progressCards}
-          onCreateCard={onCreateCard}
-          onEditCard={onEditCard}
-          onUpdateCard={onUpdateCard}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          draggedCardId={dragState.draggedCard?.id || null}
-        />
-        
-        <KanbanColumn
-          title="Concluído"
-          columnId="done"
-          cards={doneCards}
-          onCreateCard={onCreateCard}
-          onEditCard={onEditCard}
-          onUpdateCard={onUpdateCard}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          draggedCardId={dragState.draggedCard?.id || null}
-        />
+      <div className="flex items-center justify-between p-6 pb-2">
+        <h2 className="text-lg font-semibold">Quadro</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowColumnEditor(true)}
+          className="gap-2"
+        >
+          <Settings size={16} />
+          Gerenciar Colunas
+        </Button>
       </div>
+
+      <div className="flex gap-6 p-6 pt-4 min-w-max">
+        {sortedColumns.map((column) => {
+          const columnCards = cards
+            .filter(card => card.column === column.id)
+            .sort((a, b) => a.order - b.order)
+
+          return (
+            <KanbanColumn
+              key={column.id}
+              title={column.name}
+              columnId={column.id}
+              cards={columnCards}
+              onCreateCard={onCreateCard}
+              onEditCard={onEditCard}
+              onUpdateCard={onUpdateCard}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              draggedCardId={dragState.draggedCard?.id || null}
+            />
+          )
+        })}
+      </div>
+
+      <ColumnEditor
+        isOpen={showColumnEditor}
+        onClose={() => setShowColumnEditor(false)}
+        columns={columns}
+        onAddColumn={onAddColumn}
+        onUpdateColumn={onUpdateColumn}
+        onDeleteColumn={onDeleteColumn}
+        onReorderColumns={onReorderColumns}
+      />
     </div>
   )
 }

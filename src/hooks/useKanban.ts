@@ -1,14 +1,41 @@
 import { useKV } from '@github/spark/hooks'
-import { Board, Card, Tag } from '@/types/kanban'
+import { Board, Card, Tag, Column } from '@/types/kanban'
 
 export function useBoards() {
   const [boards, setBoards] = useKV<Board[]>('kanban-boards', [])
   const [activeBoard, setActiveBoard] = useKV<string>('active-board', '')
 
+  // Migrate old boards without columns
+  const migratedBoards = boards.map(board => {
+    if (!board.columns || board.columns.length === 0) {
+      return {
+        ...board,
+        columns: [
+          { id: 'todo', name: 'A Fazer', order: 0 },
+          { id: 'progress', name: 'Em Progresso', order: 1 },
+          { id: 'done', name: 'Concluído', order: 2 }
+        ]
+      }
+    }
+    return board
+  })
+
+  // Update boards if migration occurred
+  if (JSON.stringify(migratedBoards) !== JSON.stringify(boards)) {
+    setBoards(migratedBoards)
+  }
+
   const createBoard = (name: string) => {
+    const defaultColumns: Column[] = [
+      { id: 'todo', name: 'A Fazer', order: 0 },
+      { id: 'progress', name: 'Em Progresso', order: 1 },
+      { id: 'done', name: 'Concluído', order: 2 }
+    ]
+
     const newBoard: Board = {
       id: crypto.randomUUID(),
       name,
+      columns: defaultColumns,
       createdAt: new Date().toISOString()
     }
     
@@ -32,13 +59,84 @@ export function useBoards() {
     )
   }
 
+  const addColumn = (boardId: string, name: string) => {
+    setBoards(current => 
+      current.map(board => {
+        if (board.id === boardId) {
+          const newColumn: Column = {
+            id: crypto.randomUUID(),
+            name,
+            order: board.columns.length
+          }
+          return { ...board, columns: [...board.columns, newColumn] }
+        }
+        return board
+      })
+    )
+  }
+
+  const updateColumn = (boardId: string, columnId: string, updates: Partial<Column>) => {
+    setBoards(current => 
+      current.map(board => {
+        if (board.id === boardId) {
+          return {
+            ...board,
+            columns: board.columns.map(col => 
+              col.id === columnId ? { ...col, ...updates } : col
+            )
+          }
+        }
+        return board
+      })
+    )
+  }
+
+  const deleteColumn = (boardId: string, columnId: string) => {
+    setBoards(current => 
+      current.map(board => {
+        if (board.id === boardId) {
+          return {
+            ...board,
+            columns: board.columns.filter(col => col.id !== columnId)
+          }
+        }
+        return board
+      })
+    )
+  }
+
+  const reorderColumns = (boardId: string, sourceIndex: number, destinationIndex: number) => {
+    setBoards(current => 
+      current.map(board => {
+        if (board.id === boardId) {
+          const newColumns = [...board.columns]
+          const [removed] = newColumns.splice(sourceIndex, 1)
+          newColumns.splice(destinationIndex, 0, removed)
+          
+          // Update order values
+          const reorderedColumns = newColumns.map((col, index) => ({
+            ...col,
+            order: index
+          }))
+          
+          return { ...board, columns: reorderedColumns }
+        }
+        return board
+      })
+    )
+  }
+
   return {
-    boards,
+    boards: migratedBoards,
     activeBoard,
     setActiveBoard,
     createBoard,
     deleteBoard,
-    updateBoard
+    updateBoard,
+    addColumn,
+    updateColumn,
+    deleteColumn,
+    reorderColumns
   }
 }
 
@@ -68,12 +166,28 @@ export function useGlobalCards() {
 export function useCards(boardId: string) {
   const [cards, setCards] = useKV<Card[]>('kanban-cards', [])
   
-  const boardCards = cards.filter(card => card.boardId === boardId)
+  // Migrate cards without order property
+  const migratedCards = cards.map((card, index) => {
+    if (card.order === undefined) {
+      return { ...card, order: index }
+    }
+    return card
+  })
+
+  // Update cards if migration occurred
+  if (JSON.stringify(migratedCards) !== JSON.stringify(cards)) {
+    setCards(migratedCards)
+  }
+  
+  const boardCards = migratedCards.filter(card => card.boardId === boardId)
 
   // Function to get all cards across all boards (for planner)
-  const getAllCards = () => cards
+  const getAllCards = () => migratedCards
 
-  const createCard = (columnId: 'todo' | 'progress' | 'done', title: string) => {
+  const createCard = (columnId: string, title: string) => {
+    const columnCards = migratedCards.filter(card => card.boardId === boardId && card.column === columnId)
+    const maxOrder = columnCards.length > 0 ? Math.max(...columnCards.map(c => c.order)) : -1
+
     const newCard: Card = {
       id: crypto.randomUUID(),
       title,
@@ -82,6 +196,7 @@ export function useCards(boardId: string) {
       checklist: [],
       column: columnId,
       boardId,
+      order: maxOrder + 1,
       createdAt: new Date().toISOString()
     }
     
@@ -101,8 +216,60 @@ export function useCards(boardId: string) {
     setCards(current => current.filter(card => card.id !== cardId))
   }
 
-  const moveCard = (cardId: string, newColumn: 'todo' | 'progress' | 'done') => {
-    updateCard(cardId, { column: newColumn })
+  const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
+    if (newOrder !== undefined) {
+      // Reordering within same column or moving to different column
+      setCards(current => {
+        const card = current.find(c => c.id === cardId)
+        if (!card) return current
+
+        const otherCards = current.filter(c => c.id !== cardId)
+        const targetColumnCards = otherCards.filter(c => 
+          c.boardId === boardId && c.column === newColumn
+        ).sort((a, b) => a.order - b.order)
+
+        // Insert at the new position and reorder
+        targetColumnCards.splice(newOrder, 0, { ...card, column: newColumn })
+        
+        const reorderedCards = targetColumnCards.map((c, index) => ({
+          ...c,
+          order: index
+        }))
+
+        return [
+          ...otherCards.filter(c => !(c.boardId === boardId && c.column === newColumn)),
+          ...reorderedCards
+        ]
+      })
+    } else {
+      // Simple column change
+      updateCard(cardId, { column: newColumn })
+    }
+  }
+
+  const reorderCard = (cardId: string, newOrder: number) => {
+    setCards(current => {
+      const card = current.find(c => c.id === cardId)
+      if (!card) return current
+
+      const sameColumnCards = current.filter(c => 
+        c.boardId === boardId && c.column === card.column && c.id !== cardId
+      ).sort((a, b) => a.order - b.order)
+
+      // Insert at new position
+      sameColumnCards.splice(newOrder, 0, card)
+      
+      // Reorder all cards in the column
+      const reorderedCards = sameColumnCards.map((c, index) => ({
+        ...c,
+        order: index
+      }))
+
+      return [
+        ...current.filter(c => !(c.boardId === boardId && c.column === card.column)),
+        ...reorderedCards
+      ]
+    })
   }
 
   const scheduleCard = (cardId: string, date: string, time: string) => {
@@ -116,6 +283,7 @@ export function useCards(boardId: string) {
     updateCard,
     deleteCard,
     moveCard,
+    reorderCard,
     scheduleCard
   }
 }

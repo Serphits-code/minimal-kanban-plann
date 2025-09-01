@@ -30,6 +30,7 @@ export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging, o
       draggable
       onDragStart={(e) => onDragStart(card, e)}
       onDragEnd={onDragEnd}
+      data-card-id={card.id}
       className={`cursor-move transition-all duration-200 hover:shadow-md ${
         isDragging ? 'opacity-50 scale-95' : ''
       }`}

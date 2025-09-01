@@ -7,13 +7,13 @@ import React, { useState } from 'react'
 
 interface KanbanColumnProps {
   title: string
-  columnId: 'todo' | 'progress' | 'done'
+  columnId: string
   cards: CardType[]
-  onCreateCard: (columnId: 'todo' | 'progress' | 'done', title: string) => void
+  onCreateCard: (columnId: string, title: string) => void
   onEditCard: (card: CardType) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onDragOver: (event: React.DragEvent) => void
-  onDrop: (column: 'todo' | 'progress' | 'done', event: React.DragEvent) => void
+  onDrop: (column: string, event: React.DragEvent) => void
   onDragStart: (card: CardType, event: React.DragEvent) => void
   onDragEnd: () => void
   draggedCardId: string | null
@@ -34,6 +34,7 @@ export function KanbanColumn({
 }: KanbanColumnProps) {
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -43,13 +44,39 @@ export function KanbanColumn({
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyEvent) => {
     if (e.key === 'Enter') {
       handleAddCard()
     } else if (e.key === 'Escape') {
       setIsAddingCard(false)
       setNewCardTitle('')
     }
+  }
+
+  const handleCardDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleCardDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const draggedCardId = e.dataTransfer.getData('cardId')
+    const sourceColumn = e.dataTransfer.getData('sourceColumn')
+    
+    if (draggedCardId && (sourceColumn !== columnId || index !== null)) {
+      // Custom drop handling for reordering
+      onDrop(columnId, e)
+    }
+    
+    setDragOverIndex(null)
+  }
+
+  const handleColumnDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    onDrop(columnId, e)
+    setDragOverIndex(null)
   }
 
   return (
@@ -66,19 +93,33 @@ export function KanbanColumn({
           draggedCardId ? 'border-primary bg-primary/5' : 'border-transparent'
         }`}
         onDragOver={onDragOver}
-        onDrop={(e) => onDrop(columnId, e)}
+        onDrop={handleColumnDrop}
+        onDragLeave={() => setDragOverIndex(null)}
       >
-        {cards.map(card => (
-          <KanbanCard
-            key={card.id}
-            card={card}
-            onEdit={onEditCard}
-            onUpdateCard={onUpdateCard}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            isDragging={draggedCardId === card.id}
-          />
+        {cards.map((card, index) => (
+          <div key={card.id}>
+            {dragOverIndex === index && draggedCardId && (
+              <div className="h-2 bg-primary rounded-full mb-2 opacity-50" />
+            )}
+            <div
+              onDragOver={(e) => handleCardDragOver(e, index)}
+              onDrop={(e) => handleCardDrop(e, index)}
+            >
+              <KanbanCard
+                card={card}
+                onEdit={onEditCard}
+                onUpdateCard={onUpdateCard}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                isDragging={draggedCardId === card.id}
+              />
+            </div>
+          </div>
         ))}
+        
+        {dragOverIndex === cards.length && draggedCardId && (
+          <div className="h-2 bg-primary rounded-full opacity-50" />
+        )}
 
         {isAddingCard ? (
           <div className="p-3 border rounded-lg bg-card">

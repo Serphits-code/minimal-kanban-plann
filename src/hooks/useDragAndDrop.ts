@@ -7,7 +7,7 @@ interface DragState {
   dragOffset: { x: number; y: number }
 }
 
-export function useDragAndDrop(onCardMove: (cardId: string, newColumn: 'todo' | 'progress' | 'done') => void) {
+export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, newOrder?: number) => void) {
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedCard: null,
@@ -28,7 +28,8 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: 'todo' | 
     })
     
     event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', card.id)
+    event.dataTransfer.setData('cardId', card.id)
+    event.dataTransfer.setData('sourceColumn', card.column)
   }
 
   const handleDragEnd = () => {
@@ -44,11 +45,43 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: 'todo' | 
     event.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = (column: 'todo' | 'progress' | 'done', event: React.DragEvent) => {
+  const handleDrop = (column: string, event: React.DragEvent) => {
     event.preventDefault()
-    const cardId = event.dataTransfer.getData('text/plain')
+    const cardId = event.dataTransfer.getData('cardId')
+    const sourceColumn = event.dataTransfer.getData('sourceColumn')
+    
     if (cardId && cardId !== '') {
-      onCardMove(cardId, column)
+      // Calculate drop position for reordering
+      const dropTarget = event.currentTarget as HTMLElement
+      const cards = Array.from(dropTarget.children).filter(child => 
+        child.querySelector('[data-card-id]')
+      )
+      
+      let dropIndex = cards.length
+      
+      // Find the insertion point based on mouse position
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i] as HTMLElement
+        const rect = card.getBoundingClientRect()
+        const cardCenter = rect.top + rect.height / 2
+        
+        if (event.clientY < cardCenter) {
+          dropIndex = i
+          break
+        }
+      }
+      
+      // If moving within the same column, adjust for the dragged card removal
+      if (sourceColumn === column && dragState.draggedCard) {
+        const draggedIndex = cards.findIndex(card => 
+          card.querySelector(`[data-card-id="${dragState.draggedCard?.id}"]`)
+        )
+        if (draggedIndex !== -1 && draggedIndex < dropIndex) {
+          dropIndex--
+        }
+      }
+      
+      onCardMove(cardId, column, dropIndex)
     }
     handleDragEnd()
   }

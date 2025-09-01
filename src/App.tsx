@@ -14,11 +14,11 @@ import { toast } from 'sonner'
 type ViewMode = 'kanban' | 'planner'
 
 function App() {
-  const { boards, activeBoard, setActiveBoard, createBoard } = useBoards()
+  const { boards, activeBoard, setActiveBoard, createBoard, addColumn, updateColumn, deleteColumn, reorderColumns } = useBoards()
   const { cards: allCards, updateCard, deleteCard } = useGlobalCards()
   const { tags, createTag } = useTags()
   // Get board-specific functions for card creation and movement
-  const { createCard, moveCard } = useCards(activeBoard)
+  const { createCard, moveCard, reorderCard } = useCards(activeBoard)
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
@@ -71,6 +71,13 @@ function App() {
   
   // Filter cards for the active board
   const boardCards = allCards.filter(card => card.boardId === activeBoard)
+  
+  // Get columns for the active board (with fallback to default columns for old boards)
+  const boardColumns = activeBoardData?.columns || [
+    { id: 'todo', name: 'A Fazer', order: 0 },
+    { id: 'progress', name: 'Em Progresso', order: 1 },
+    { id: 'done', name: 'Concluído', order: 2 }
+  ]
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -121,10 +128,15 @@ function App() {
           <KanbanBoard 
             boardId={activeBoard}
             cards={boardCards}
+            columns={boardColumns}
             onCreateCard={createCard}
             onMoveCard={moveCard}
             onUpdateCard={updateCard}
             onEditCard={handleEditCard}
+            onAddColumn={(name) => addColumn(activeBoard, name)}
+            onUpdateColumn={(columnId, updates) => updateColumn(activeBoard, columnId, updates)}
+            onDeleteColumn={(columnId) => deleteColumn(activeBoard, columnId)}
+            onReorderColumns={(sourceIndex, destinationIndex) => reorderColumns(activeBoard, sourceIndex, destinationIndex)}
           />
         ) : (
           <Planner
