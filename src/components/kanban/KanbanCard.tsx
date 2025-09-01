@@ -1,3 +1,4 @@
+import React from 'react'
 import { Card as CardType, ChecklistItem } from '@/types/kanban'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,8 +10,8 @@ interface KanbanCardProps {
   card: CardType
   index: number
   onEdit: (card: CardType) => void
-  onDragStart: (card: CardType, event: React.DragEvent, index: number) => void
-  onDragEnd: (event: React.DragEvent) => void
+  onDragStart: (card: CardType, event: React.DragEvent<HTMLElement>, index: number) => void
+  onDragEnd: (event: React.DragEvent<HTMLElement>) => void
   isDragging: boolean
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
 }

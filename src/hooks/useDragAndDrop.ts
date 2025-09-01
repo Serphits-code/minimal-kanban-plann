@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
+import React from 'react'
 import { Card as CardType } from '@/types/kanban'
 
 interface DragState {
@@ -16,7 +17,7 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     draggedIndex: null
   })
 
-  const handleDragStart = (card: CardType, event: React.DragEvent, cardIndex: number) => {
+  const handleDragStart = (card: CardType, event: React.DragEvent<HTMLElement>, cardIndex: number) => {
     setDragState({
       isDragging: true,
       draggedCard: card,
@@ -37,7 +38,7 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     }
   }
 
-  const handleDragEnd = (event: React.DragEvent) => {
+  const handleDragEnd = (event: React.DragEvent<HTMLElement>) => {
     setDragState({
       isDragging: false,
       draggedCard: null,
@@ -51,12 +52,12 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     }
   }
 
-  const handleDragOver = (event: React.DragEvent) => {
+  const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = (targetColumn: string, event: React.DragEvent, targetIndex?: number) => {
+  const handleDrop = (targetColumn: string, event: React.DragEvent<HTMLElement>, targetIndex?: number) => {
     event.preventDefault()
     
     try {
@@ -106,7 +107,7 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     handleDragEnd(event)
   }
 
-  const handleCardDrop = (targetColumn: string, targetIndex: number, event: React.DragEvent) => {
+  const handleCardDrop = (targetColumn: string, targetIndex: number, event: React.DragEvent<HTMLElement>) => {
     handleDrop(targetColumn, event, targetIndex)
   }
 

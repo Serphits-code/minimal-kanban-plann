@@ -12,10 +12,10 @@ interface KanbanColumnProps {
   onCreateCard: (columnId: string, title: string) => void
   onEditCard: (card: CardType) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
-  onDragOver: (event: React.DragEvent) => void
-  onDrop: (column: string, event: React.DragEvent) => void
-  onDragStart: (card: CardType, event: React.DragEvent, index: number) => void
-  onDragEnd: (event: React.DragEvent) => void
+  onDragOver: (event: React.DragEvent<HTMLElement>) => void
+  onDrop: (column: string, event: React.DragEvent<HTMLElement>) => void
+  onDragStart: (card: CardType, event: React.DragEvent<HTMLElement>, index: number) => void
+  onDragEnd: (event: React.DragEvent<HTMLElement>) => void
   draggedCardId: string | null
 }
 
@@ -53,12 +53,12 @@ export function KanbanColumn({
     }
   }
 
-  const handleCardDragOver = (e: React.DragEvent, index: number) => {
+  const handleCardDragOver = (e: React.DragEvent<HTMLElement>, index: number) => {
     e.preventDefault()
     setDragOverIndex(index)
   }
 
-  const handleCardDrop = (e: React.DragEvent, index: number) => {
+  const handleCardDrop = (e: React.DragEvent<HTMLElement>, index: number) => {
     e.preventDefault()
     e.stopPropagation()
     
@@ -73,7 +73,7 @@ export function KanbanColumn({
     setDragOverIndex(null)
   }
 
-  const handleColumnDrop = (e: React.DragEvent) => {
+  const handleColumnDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault()
     onDrop(columnId, e)
     setDragOverIndex(null)
