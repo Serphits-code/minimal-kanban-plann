@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card as CardType } from '@/types/kanban'
 import { format, startOfDay, isSameDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Calendar as CalendarIcon, Clock } from '@phosphor-icons/react'
+import { Clock } from '@phosphor-icons/react'
 
 interface PlannerProps {
   cards: CardType[]
@@ -58,6 +59,10 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
     setDraggedCard(null)
   }
 
+  const handleUnscheduleCard = (cardId: string) => {
+    onScheduleCard(cardId, '', '')
+  }
+
   const handleDragOver = (event: React.DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
@@ -68,144 +73,157 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
   }
 
   return (
-    <div className="flex-1 p-6 overflow-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <CalendarIcon size={24} />
-          Planejador
-        </h1>
-      </div>
+    <div className="flex flex-col h-full">
+      <div className="p-4 space-y-4">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={(date) => date && setSelectedDate(date)}
+          locale={ptBR}
+          className="rounded-md border w-full"
+        />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Calendário</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                locale={ptBR}
-                className="rounded-md border"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle className="text-lg">Cards Não Agendados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {unscheduledCards.map(card => (
-                  <div
-                    key={card.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(card, e)}
-                    onDragEnd={handleDragEnd}
-                    className="p-3 border rounded cursor-move hover:shadow-md transition-shadow bg-card"
-                    onClick={() => onEditCard(card)}
-                  >
-                    <div className="font-medium text-sm mb-1">{card.title}</div>
-                    <div className="flex flex-wrap gap-1">
-                      {card.tags.map(tag => (
-                        <Badge
-                          key={tag.id}
-                          variant="secondary"
-                          className="text-xs"
-                          style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                        >
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                
-                {unscheduledCards.length === 0 && (
-                  <div className="text-center text-muted-foreground py-8">
-                    Todos os cards estão agendados
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1 max-h-96 overflow-y-auto">
-                {timeSlots.map(time => {
-                  const cardsAtTime = getCardsForTime(time)
-                  
-                  return (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Cards Não Agendados</CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div 
+                className={`min-h-8 border-2 border-dashed transition-all rounded p-2 ${
+                  draggedCard ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'
+                }`}
+                onDragOver={handleDragOver}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const cardId = e.dataTransfer.getData('text/plain')
+                  if (cardId) {
+                    handleUnscheduleCard(cardId)
+                  }
+                }}
+              >
+              <ScrollArea className="h-32">
+                <div className="space-y-2">
+                  {unscheduledCards.map(card => (
                     <div
-                      key={time}
-                      className="flex items-start gap-3 p-2 border-b hover:bg-muted/50 transition-colors min-h-12"
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(time, e)}
+                      key={card.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(card, e)}
+                      onDragEnd={handleDragEnd}
+                      className="p-2 border rounded cursor-move hover:shadow-md transition-shadow bg-background text-xs"
+                      onClick={() => onEditCard(card)}
                     >
-                      <div className="w-16 text-sm text-muted-foreground font-mono">
-                        {time}
-                      </div>
-                      
-                      <div className="flex-1 space-y-2">
-                        {cardsAtTime.map(card => (
-                          <div
-                            key={card.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(card, e)}
-                            onDragEnd={handleDragEnd}
-                            className="p-2 border rounded cursor-move hover:shadow-md transition-shadow bg-card"
-                            onClick={() => onEditCard(card)}
+                      <div className="font-medium mb-1">{card.title}</div>
+                      <div className="flex flex-wrap gap-1">
+                        {card.tags.slice(0, 2).map(tag => (
+                          <Badge
+                            key={tag.id}
+                            variant="secondary"
+                            className="text-xs"
+                            style={{ backgroundColor: tag.color + '20', color: tag.color }}
                           >
-                            <div className="font-medium text-sm mb-1">{card.title}</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex flex-wrap gap-1">
-                                {card.tags.map(tag => (
-                                  <Badge
-                                    key={tag.id}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                                  >
-                                    {tag.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                              
-                              {card.dueDate && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Clock size={12} />
-                                  {format(new Date(card.dueDate), 'dd/MM', { locale: ptBR })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+                            {tag.name}
+                          </Badge>
                         ))}
-                        
-                        {cardsAtTime.length === 0 && (
-                          <div className="h-8 border-2 border-dashed border-transparent rounded transition-colors hover:border-border">
-                            <div className="text-xs text-muted-foreground/50 text-center leading-8">
-                              Solte um card aqui
-                            </div>
-                          </div>
+                        {card.tags.length > 2 && (
+                          <Badge variant="secondary" className="text-xs">
+                            +{card.tags.length - 2}
+                          </Badge>
                         )}
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                  
+                  {unscheduledCards.length === 0 && (
+                    <div className="text-center text-muted-foreground py-4 text-xs">
+                      Todos os cards estão agendados
+                      <br />
+                      <span className="text-xs">Arraste cards aqui para desagendar</span>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex-1 border-t">
+        <div className="p-4">
+          <h3 className="font-medium text-sm mb-3">
+            {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </h3>
+          
+          <ScrollArea className="h-64">
+            <div className="space-y-1">
+              {timeSlots.filter((_, index) => index % 2 === 0).map(time => {
+                const cardsAtTime = getCardsForTime(time)
+                
+                return (
+                  <div
+                    key={time}
+                    className="flex items-start gap-2 p-2 border-b hover:bg-muted/50 transition-colors min-h-10"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(time, e)}
+                  >
+                    <div className="w-12 text-xs text-muted-foreground font-mono flex-shrink-0">
+                      {time}
+                    </div>
+                    
+                    <div className="flex-1 space-y-1">
+                      {cardsAtTime.map(card => (
+                        <div
+                          key={card.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(card, e)}
+                          onDragEnd={handleDragEnd}
+                          className="p-2 border rounded cursor-move hover:shadow-md transition-shadow bg-background text-xs"
+                          onClick={() => onEditCard(card)}
+                        >
+                          <div className="font-medium mb-1">{card.title}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap gap-1">
+                              {card.tags.slice(0, 1).map(tag => (
+                                <Badge
+                                  key={tag.id}
+                                  variant="secondary"
+                                  className="text-xs"
+                                  style={{ backgroundColor: tag.color + '20', color: tag.color }}
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                              {card.tags.length > 1 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{card.tags.length - 1}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {card.dueDate && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock size={10} />
+                                {format(new Date(card.dueDate), 'dd/MM', { locale: ptBR })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {cardsAtTime.length === 0 && (
+                        <div className={`h-6 border border-dashed transition-all rounded ${
+                          draggedCard ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'
+                        }`}>
+                          <div className="text-xs text-muted-foreground/50 text-center leading-6">
+                            {draggedCard ? 'Soltar aqui' : 'Vazio'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </div>

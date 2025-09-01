@@ -12,9 +12,10 @@ interface KanbanCardProps {
   onDragStart: (card: CardType, event: React.DragEvent) => void
   onDragEnd: () => void
   isDragging: boolean
+  onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
 }
 
-export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging }: KanbanCardProps) {
+export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging, onUpdateCard }: KanbanCardProps) {
   const completedItems = card.checklist.filter(item => item.completed).length
   const totalItems = card.checklist.length
 
@@ -22,7 +23,7 @@ export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging }:
     const updatedChecklist = card.checklist.map(item =>
       item.id === itemId ? { ...item, completed } : item
     )
-    onEdit({ ...card, checklist: updatedChecklist })
+    onUpdateCard(card.id, { checklist: updatedChecklist })
   }
 
   return (

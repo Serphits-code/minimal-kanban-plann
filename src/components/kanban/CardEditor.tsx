@@ -271,43 +271,70 @@ export function CardEditor({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Data de Vencimento</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-2">
-                    <CalendarIcon size={16} />
-                    {dueDate ? format(dueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    locale={ptBR}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Agendar</label>
-              <div className="space-y-2">
+              <div className="flex gap-2">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start gap-2">
+                    <Button variant="outline" className="flex-1 justify-start gap-2">
                       <CalendarIcon size={16} />
-                      {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Data'}
+                      {dueDate ? format(dueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={scheduledDate}
-                      onSelect={setScheduledDate}
+                      selected={dueDate}
+                      onSelect={setDueDate}
                       locale={ptBR}
                     />
                   </PopoverContent>
                 </Popover>
+                {dueDate && (
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => setDueDate(undefined)}
+                    className="flex-shrink-0"
+                  >
+                    <X size={16} />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Agendar</label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="flex-1 justify-start gap-2">
+                        <CalendarIcon size={16} />
+                        {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Data'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={setScheduledDate}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {scheduledDate && (
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => {
+                        setScheduledDate(undefined)
+                        setScheduledTime('')
+                      }}
+                      className="flex-shrink-0"
+                    >
+                      <X size={16} />
+                    </Button>
+                  )}
+                </div>
                 
                 <div className="flex gap-2">
                   <Clock size={16} className="mt-2 text-muted-foreground" />
@@ -316,6 +343,7 @@ export function CardEditor({
                     value={scheduledTime}
                     onChange={(e) => setScheduledTime(e.target.value)}
                     className="flex-1"
+                    disabled={!scheduledDate}
                   />
                 </div>
               </div>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useBoards, useCards, useTags } from '@/hooks/useKanban'
 import { BoardSelector } from '@/components/kanban/BoardSelector'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
@@ -8,7 +7,7 @@ import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { CardEditor } from '@/components/kanban/CardEditor'
 import { Planner } from '@/components/planner/Planner'
 import { Card as CardType } from '@/types/kanban'
-import { Kanban, Calendar } from '@phosphor-icons/react'
+import { Calendar, X } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 
@@ -18,7 +17,7 @@ function App() {
   const { tags, createTag } = useTags()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('kanban')
+  const [isPlannerOpen, setIsPlannerOpen] = useState(false)
 
   const handleCreateBoard = (name: string) => {
     createBoard(name)
@@ -31,7 +30,15 @@ function App() {
   }
 
   const handleSaveCard = (card: CardType) => {
-    updateCard(card.id, card)
+    updateCard(card.id, {
+      title: card.title,
+      description: card.description,
+      tags: card.tags,
+      checklist: card.checklist,
+      dueDate: card.dueDate,
+      scheduledDate: card.scheduledDate,
+      scheduledTime: card.scheduledTime
+    })
     toast.success('Card atualizado!')
   }
 
@@ -61,6 +68,14 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button
+              variant={isPlannerOpen ? "default" : "outline"}
+              onClick={() => setIsPlannerOpen(!isPlannerOpen)}
+              className="gap-2"
+            >
+              <Calendar size={16} />
+              Planejador
+            </Button>
             <BoardSelector
               boards={boards}
               activeBoard={activeBoard}
@@ -71,36 +86,43 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <div className="border-b px-6 py-2">
-            <TabsList className="grid w-fit grid-cols-2">
-              <TabsTrigger value="kanban" className="gap-2">
-                <Kanban size={16} />
-                Kanban
-              </TabsTrigger>
-              <TabsTrigger value="planner" className="gap-2">
-                <Calendar size={16} />
-                Planejador
-              </TabsTrigger>
-            </TabsList>
-          </div>
+      <div className="flex-1 flex overflow-hidden">
+        <div className={`transition-all duration-300 ease-in-out ${isPlannerOpen ? 'flex-1' : 'w-full'}`}>
+          <KanbanBoard 
+            boardId={activeBoard}
+            onEditCard={handleEditCard}
+          />
+        </div>
 
-          <TabsContent value="kanban" className="flex-1 m-0">
-            <KanbanBoard 
-              boardId={activeBoard}
-              onEditCard={handleEditCard}
-            />
-          </TabsContent>
-
-          <TabsContent value="planner" className="flex-1 m-0">
-            <Planner
-              cards={cards}
-              onScheduleCard={handleScheduleCard}
-              onEditCard={handleEditCard}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className={`transition-all duration-300 ease-in-out border-l bg-card flex flex-col shadow-lg ${
+          isPlannerOpen ? 'w-96 opacity-100' : 'w-0 opacity-0 overflow-hidden'
+        }`}>
+          {isPlannerOpen && (
+            <>
+              <div className="p-4 border-b flex items-center justify-between bg-muted/30">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Calendar size={18} />
+                  Planejador
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsPlannerOpen(false)}
+                  className="hover:bg-background"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <Planner
+                  cards={cards}
+                  onScheduleCard={handleScheduleCard}
+                  onEditCard={handleEditCard}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <CardEditor

@@ -9,7 +9,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
-  const { cards, createCard, moveCard } = useCards(boardId)
+  const { cards, createCard, moveCard, updateCard } = useCards(boardId)
   const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(moveCard)
 
   const todoCards = cards.filter(card => card.column === 'todo')
@@ -36,6 +36,7 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           cards={todoCards}
           onCreateCard={createCard}
           onEditCard={onEditCard}
+          onUpdateCard={updateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}
@@ -49,6 +50,7 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           cards={progressCards}
           onCreateCard={createCard}
           onEditCard={onEditCard}
+          onUpdateCard={updateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}
@@ -62,6 +64,7 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           cards={doneCards}
           onCreateCard={createCard}
           onEditCard={onEditCard}
+          onUpdateCard={updateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}

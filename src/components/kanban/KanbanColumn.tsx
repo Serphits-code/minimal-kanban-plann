@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   cards: CardType[]
   onCreateCard: (columnId: 'todo' | 'progress' | 'done', title: string) => void
   onEditCard: (card: CardType) => void
+  onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onDragOver: (event: React.DragEvent) => void
   onDrop: (column: 'todo' | 'progress' | 'done', event: React.DragEvent) => void
   onDragStart: (card: CardType, event: React.DragEvent) => void
@@ -24,6 +25,7 @@ export function KanbanColumn({
   cards,
   onCreateCard,
   onEditCard,
+  onUpdateCard,
   onDragOver,
   onDrop,
   onDragStart,
@@ -60,18 +62,18 @@ export function KanbanColumn({
       </div>
 
       <div
-        className="flex-1 space-y-3 p-2 rounded-lg border-2 border-dashed border-transparent transition-colors min-h-40"
+        className={`flex-1 space-y-3 p-2 rounded-lg border-2 border-dashed transition-all duration-200 min-h-40 ${
+          draggedCardId ? 'border-primary bg-primary/5' : 'border-transparent'
+        }`}
         onDragOver={onDragOver}
         onDrop={(e) => onDrop(columnId, e)}
-        style={{
-          borderColor: draggedCardId ? 'var(--color-border)' : 'transparent'
-        }}
       >
         {cards.map(card => (
           <KanbanCard
             key={card.id}
             card={card}
             onEdit={onEditCard}
+            onUpdateCard={onUpdateCard}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             isDragging={draggedCardId === card.id}
