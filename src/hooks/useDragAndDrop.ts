@@ -18,14 +18,15 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
   })
 
   const handleDragStart = (card: CardType, event: React.DragEvent<HTMLElement>, cardIndex: number) => {
+    // Prevent default to ensure we control the drag behavior
+    event.dataTransfer.effectAllowed = 'move'
+    
     setDragState({
       isDragging: true,
       draggedCard: card,
       draggedFrom: card.column,
       draggedIndex: cardIndex
     })
-    
-    event.dataTransfer.effectAllowed = 'move'
     
     // Set multiple formats for better compatibility
     event.dataTransfer.setData('text/plain', card.id)
@@ -62,9 +63,12 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
 
   const handleDrop = (targetColumn: string, event: React.DragEvent<HTMLElement>, targetIndex?: number) => {
     event.preventDefault()
+    event.stopPropagation()
     
     // Get the dragged card from state
-    if (!dragState.draggedCard) return
+    if (!dragState.draggedCard) {
+      return
+    }
     
     const cardId = dragState.draggedCard.id
     const sourceColumn = dragState.draggedCard.column
@@ -98,12 +102,8 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
       newIndex = Math.max(0, newIndex - 1)
     }
     
-    // Only move if position actually changed
-    if (sourceColumn !== targetColumn || sourceIndex !== newIndex) {
-      onCardMove(cardId, targetColumn, newIndex)
-    }
-    
-    handleDragEnd(event)
+    // Always call the move function to trigger state update
+    onCardMove(cardId, targetColumn, newIndex)
   }
 
   const handleCardDrop = (targetColumn: string, targetIndex: number, event: React.DragEvent<HTMLElement>) => {

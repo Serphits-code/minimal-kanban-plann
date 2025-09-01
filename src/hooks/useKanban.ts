@@ -219,7 +219,9 @@ export function useCards(boardId: string) {
   const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
     setCards(current => {
       const card = current.find(c => c.id === cardId)
-      if (!card) return current
+      if (!card) {
+        return current
+      }
 
       // Remove the card from its current position
       const otherCards = current.filter(c => c.id !== cardId)
@@ -258,20 +260,23 @@ export function useCards(boardId: string) {
         if (!groups[card.column]) groups[card.column] = []
         groups[card.column].push(card)
         return groups
-      }, {} as Record<string, CardType[]>)
+      }, {} as Record<string, Card[]>)
       
-      const reorderedOtherColumnCards = Object.values(columnGroups).flat().map((card, index, array) => {
-        const columnCards = array.filter(c => c.column === card.column)
-        const columnIndex = columnCards.findIndex(c => c.id === card.id)
-        return { ...card, order: columnIndex }
+      const reorderedOtherColumnCards: Card[] = []
+      Object.entries(columnGroups).forEach(([column, columnCards]) => {
+        const sortedCards = columnCards.sort((a, b) => a.order - b.order)
+        sortedCards.forEach((card, index) => {
+          reorderedOtherColumnCards.push({ ...card, order: index })
+        })
       })
 
-      // Combine all cards
-      return [
+      const result = [
         ...otherBoardCards,
         ...reorderedTargetCards,
         ...reorderedOtherColumnCards
       ]
+
+      return result
     })
   }
 

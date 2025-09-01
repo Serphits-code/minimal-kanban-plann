@@ -75,8 +75,8 @@ export function KanbanColumn({
     }
     
     if (cardId) {
-      // Call the drop handler with the column and index
-      onDrop(columnId, e)
+      // Call the drop handler with the specific index
+      onDrop(columnId, e, index)
     }
     
     setDragOverIndex(null)
@@ -84,7 +84,8 @@ export function KanbanColumn({
 
   const handleColumnDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault()
-    onDrop(columnId, e)
+    // Drop at the end of the column
+    onDrop(columnId, e, cards.length)
     setDragOverIndex(null)
   }
 
