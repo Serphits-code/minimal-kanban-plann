@@ -35,6 +35,7 @@ export interface Card {
   dueDate?: string
   scheduledDate?: string
   scheduledTime?: string
+  duration?: number // Duration in hours (1, 2, 3, etc.)
   column: string
   boardId: string
   order: number

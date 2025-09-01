@@ -9,16 +9,18 @@ import { Card as CardType } from '@/types/kanban'
 import { format, startOfDay, isSameDay, addDays, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Clock, Calendar as CalendarIcon, CaretLeft, CaretRight, MagnifyingGlass, Funnel, Paperclip } from '@phosphor-icons/react'
+import { toast } from 'sonner'
 
 interface PlannerProps {
   cards: CardType[]
   onScheduleCard: (cardId: string, date: string, time: string) => void
   onEditCard: (card: CardType) => void
+  onUpdateCardDuration?: (cardId: string, duration: number) => void
 }
 
 type ViewMode = 'day' | 'week' | 'month'
 
-export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
+export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuration }: PlannerProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [draggedCard, setDraggedCard] = useState<CardType | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('day')
@@ -110,6 +112,33 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
     const cardId = event.dataTransfer.getData('text/plain')
     
     if (cardId && draggedCard) {
+      // Check if the target time and duration would conflict with existing cards
+      const cardDuration = draggedCard.duration || 1
+      const startHour = parseInt(time.split(':')[0])
+      
+      // Check for conflicts with existing scheduled cards
+      const hasConflict = scheduledCards.some(existingCard => {
+        if (existingCard.id === cardId) return false // Ignore the card being moved
+        
+        if (existingCard.scheduledTime) {
+          const existingStartHour = parseInt(existingCard.scheduledTime.split(':')[0])
+          const existingDuration = existingCard.duration || 1
+          
+          // Check if the time ranges overlap
+          return (
+            startHour < existingStartHour + existingDuration &&
+            startHour + cardDuration > existingStartHour
+          )
+        }
+        return false
+      })
+      
+      if (hasConflict) {
+        toast.error('Conflito de horário! Escolha outro horário.')
+        setDraggedCard(null)
+        return
+      }
+      
       onScheduleCard(cardId, selectedDate.toISOString(), time)
     }
     
@@ -125,8 +154,35 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
     event.dataTransfer.dropEffect = 'move'
   }
 
+  const isDropZoneHighlighted = (time: string) => {
+    if (!draggedCard) return false
+    
+    const timeHour = parseInt(time.split(':')[0])
+    const draggedDuration = draggedCard.duration || 1
+    
+    // Highlight this time slot if it would be occupied by the dragged card
+    const [dropHour] = event?.target?.closest('[data-time]')?.getAttribute('data-time')?.split(':') || []
+    if (!dropHour) return false
+    
+    const dropHourNum = parseInt(dropHour)
+    return timeHour >= dropHourNum && timeHour < dropHourNum + draggedDuration
+  }
+
   const getCardsForTime = (time: string) => {
-    return scheduledCards.filter(card => card.scheduledTime === time)
+    return scheduledCards.filter(card => {
+      if (!card.scheduledTime) return false
+      
+      const cardStartHour = parseInt(card.scheduledTime.split(':')[0])
+      const cardDuration = card.duration || 1
+      const timeHour = parseInt(time.split(':')[0])
+      
+      // Check if this time slot falls within the card's duration
+      return timeHour >= cardStartHour && timeHour < cardStartHour + cardDuration
+    })
+  }
+
+  const isCardStartTime = (card: CardType, time: string) => {
+    return card.scheduledTime === time
   }
 
   const getCardStats = () => {
@@ -180,6 +236,8 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                       onEdit={onEditCard}
                       isDragging={draggedCard?.id === card.id}
                       showTime={false}
+                      duration={card.duration || 1}
+                      onUpdateDuration={onUpdateCardDuration}
                     />
                   ))}
                   
@@ -250,12 +308,21 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                   const cardsAtTime = getCardsForTime(time)
                   const isCurrentHour = new Date().getHours() === parseInt(time.split(':')[0])
                   
+                  // Check if this slot is occupied by a multi-hour task
+                  const occupyingCard = cardsAtTime.find(card => !isCardStartTime(card, time))
+                  const hasStartingCard = cardsAtTime.some(card => isCardStartTime(card, time))
+                  
                   return (
                     <div
                       key={time}
+                      data-time={time}
                       className={`flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-muted/50 min-h-16 border ${
-                        cardsAtTime.length > 0 ? 'bg-muted/20 border-muted' : 'border-transparent'
-                      } ${isCurrentHour && isToday(selectedDate) ? 'ring-2 ring-accent bg-accent/5' : ''}`}
+                        hasStartingCard ? 'bg-muted/20 border-muted' : 
+                        occupyingCard ? 'bg-accent/10 border-accent/30 border-l-4' : 
+                        'border-transparent'
+                      } ${isCurrentHour && isToday(selectedDate) ? 'ring-2 ring-accent bg-accent/5' : ''} ${
+                        draggedCard ? 'hover:bg-primary/10 hover:border-primary/30' : ''
+                      }`}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(time, e)}
                     >
@@ -268,26 +335,64 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                       </div>
                       
                       <div className="flex-1 space-y-2">
-                        {cardsAtTime.map(card => (
-                          <PlannerCard
-                            key={card.id}
-                            card={card}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            onEdit={onEditCard}
-                            isDragging={draggedCard?.id === card.id}
-                            showTime={true}
-                          />
-                        ))}
+                        {cardsAtTime.map(card => {
+                          // Only render the card at its start time to avoid duplicates
+                          if (!isCardStartTime(card, time)) return null
+                          
+                          const cardDuration = card.duration || 1
+                          const isMultiHour = cardDuration > 1
+                          
+                          return (
+                            <div
+                              key={card.id}
+                              className="relative"
+                            >
+                              <PlannerCard
+                                card={card}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                                onEdit={onEditCard}
+                                isDragging={draggedCard?.id === card.id}
+                                showTime={true}
+                                duration={cardDuration}
+                                onUpdateDuration={onUpdateCardDuration}
+                              />
+                              {isMultiHour && (
+                                <div className="absolute top-1 right-1 bg-accent text-accent-foreground text-xs px-1.5 py-0.5 rounded-full font-medium">
+                                  {cardDuration}h
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                         
-                        {cardsAtTime.length === 0 && (
+                        {/* Show indicator for occupied time slots */}
+                        {occupyingCard && !hasStartingCard && (
+                          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 px-2 py-1 bg-accent/20 rounded-md">
+                              <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+                              <span className="font-medium">{occupyingCard.title}</span>
+                              <span className="text-xs">em andamento</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                          {cardsAtTime.filter(card => isCardStartTime(card, time)).length === 0 && !occupyingCard && (
                           <div className={`h-10 border border-dashed transition-all rounded-lg flex items-center justify-center ${
                             draggedCard 
                               ? 'border-primary bg-primary/10' 
                               : 'border-transparent hover:border-border'
                           }`}>
                             <div className="text-xs text-muted-foreground/50">
-                              {draggedCard ? 'Soltar card aqui' : ''}
+                              {draggedCard ? (
+                                <div className="flex items-center gap-2">
+                                  <Clock size={12} />
+                                  <span>Soltar para agendar às {time}</span>
+                                  {draggedCard.duration && draggedCard.duration > 1 && (
+                                    <span className="text-primary">({draggedCard.duration}h)</span>
+                                  )}
+                                </div>
+                              ) : ''}
                             </div>
                           </div>
                         )}
@@ -495,9 +600,12 @@ interface PlannerCardProps {
   onEdit: (card: CardType) => void
   isDragging: boolean
   showTime: boolean
+  duration?: number
+  onUpdateDuration?: (cardId: string, duration: number) => void
 }
 
-function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTime }: PlannerCardProps) {
+function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTime, duration = 1, onUpdateDuration }: PlannerCardProps) {
+  const [isResizing, setIsResizing] = useState(false)
   const completedTasks = card.checklist.filter(item => item.completed).length
   const totalTasks = card.checklist.length
   const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
@@ -505,16 +613,46 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
   const isOverdue = card.dueDate && new Date(card.dueDate) < new Date()
   const isDueToday = card.dueDate && isSameDay(new Date(card.dueDate), new Date())
 
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsResizing(true)
+    
+    const startY = e.clientY
+    const startDuration = duration
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - startY
+      const hourHeight = 64 // Height of one hour slot
+      const hoursChange = Math.round(deltaY / hourHeight)
+      const newDuration = Math.max(1, Math.min(8, startDuration + hoursChange))
+      
+      // Update the card duration (this would need to be passed as a prop)
+      if (newDuration !== duration && onUpdateDuration) {
+        onUpdateDuration(card.id, newDuration)
+      }
+    }
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(card, e)}
       onDragEnd={onDragEnd}
-      className={`p-3 border rounded-lg cursor-move hover:shadow-lg transition-all bg-background group hover:border-primary/50 ${
+      className={`p-3 border rounded-lg cursor-move hover:shadow-lg transition-all bg-background group hover:border-primary/50 h-full flex flex-col ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isOverdue ? 'border-destructive/50 bg-destructive/5' : ''} ${
         isDueToday ? 'border-amber-500/50 bg-amber-50' : ''
-      }`}
+      } ${duration > 1 ? 'min-h-16' : ''}`}
     >
       <div 
         className="space-y-2 cursor-pointer" 
@@ -609,6 +747,17 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
           </div>
         </div>
       </div>
+      
+      {/* Resize handle for multi-hour tasks */}
+      {showTime && duration > 1 && (
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize bg-accent/20 hover:bg-accent/40 transition-colors"
+          onMouseDown={handleResizeStart}
+          title="Arrastar para redimensionar"
+        >
+          <div className="w-full h-0.5 bg-accent/60 mt-0.5"></div>
+        </div>
+      )}
     </div>
   )
 }

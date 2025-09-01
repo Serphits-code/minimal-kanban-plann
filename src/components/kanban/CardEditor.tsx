@@ -43,6 +43,7 @@ export function CardEditor({
   const [dueDate, setDueDate] = useState<Date | undefined>()
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>()
   const [scheduledTime, setScheduledTime] = useState('')
+  const [duration, setDuration] = useState<number>(1)
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [showTagCreator, setShowTagCreator] = useState(false)
   const [newTagName, setNewTagName] = useState('')
@@ -61,6 +62,7 @@ export function CardEditor({
       setDueDate(card.dueDate ? new Date(card.dueDate) : undefined)
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
+      setDuration(card.duration || 1)
     } else if (!isOpen) {
       // Clear state when dialog closes
       setTitle('')
@@ -71,6 +73,7 @@ export function CardEditor({
       setDueDate(undefined)
       setScheduledDate(undefined)
       setScheduledTime('')
+      setDuration(1)
     }
   }, [card, isOpen])
 
@@ -86,7 +89,8 @@ export function CardEditor({
       attachments,
       dueDate: dueDate?.toISOString(),
       scheduledDate: scheduledDate?.toISOString(),
-      scheduledTime
+      scheduledTime,
+      duration
     }
 
     onSave(updatedCard)
@@ -501,6 +505,25 @@ export function CardEditor({
                       className="flex-1"
                       disabled={!scheduledDate}
                     />
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    <label className="text-sm text-muted-foreground whitespace-nowrap">Duração:</label>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 6, 8].map(hours => (
+                        <Button
+                          key={hours}
+                          type="button"
+                          variant={duration === hours ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setDuration(hours)}
+                          className="px-2 py-1 text-xs"
+                          disabled={!scheduledDate}
+                        >
+                          {hours}h
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

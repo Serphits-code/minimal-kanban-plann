@@ -58,7 +58,8 @@ function App() {
       attachments: card.attachments,
       dueDate: card.dueDate,
       scheduledDate: card.scheduledDate,
-      scheduledTime: card.scheduledTime
+      scheduledTime: card.scheduledTime,
+      duration: card.duration
     })
     
     // Close the dialog and clear selected card
@@ -76,6 +77,11 @@ function App() {
   const handleScheduleCard = (cardId: string, date: string, time: string) => {
     updateCard(cardId, { scheduledDate: date, scheduledTime: time })
     toast.success(date && time ? 'Card agendado!' : 'Card desagendado!')
+  }
+
+  const handleUpdateCardDuration = (cardId: string, duration: number) => {
+    updateCard(cardId, { duration })
+    toast.success(`Duração alterada para ${duration}h`)
   }
 
   const activeBoardData = boards.find(board => board.id === activeBoard)
@@ -163,6 +169,7 @@ function App() {
               cards={allCards}
               onScheduleCard={handleScheduleCard}
               onEditCard={handleEditCard}
+              onUpdateCardDuration={handleUpdateCardDuration}
             />
           </div>
         )}
