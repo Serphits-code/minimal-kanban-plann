@@ -55,6 +55,7 @@ export function KanbanColumn({
 
   const handleCardDragOver = (e: React.DragEvent<HTMLElement>, index: number) => {
     e.preventDefault()
+    e.stopPropagation()
     setDragOverIndex(index)
   }
 
@@ -66,12 +67,30 @@ export function KanbanColumn({
     setDragOverIndex(null)
   }
 
+  const handleColumnDragOver = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverIndex(cards.length)
+  }
+
   const handleColumnDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault()
     e.stopPropagation()
     // Drop at the end of the column
     onDrop(columnId, e, cards.length)
     setDragOverIndex(null)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault()
+    // Only clear drag over index if we're leaving the column entirely
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverIndex(null)
+    }
   }
 
   return (
@@ -87,13 +106,13 @@ export function KanbanColumn({
         className={`flex-1 space-y-3 p-2 rounded-lg border-2 border-dashed transition-all duration-200 min-h-40 ${
           draggedCardId ? 'border-primary bg-primary/5' : 'border-transparent'
         }`}
-        onDragOver={onDragOver}
+        onDragOver={handleColumnDragOver}
         onDrop={handleColumnDrop}
-        onDragLeave={() => setDragOverIndex(null)}
+        onDragLeave={handleDragLeave}
       >
         {cards.map((card, index) => (
           <div key={card.id}>
-            {dragOverIndex === index && draggedCardId && (
+            {dragOverIndex === index && draggedCardId && draggedCardId !== card.id && (
               <div className="h-2 bg-primary rounded-full mb-2 opacity-50" />
             )}
             <div

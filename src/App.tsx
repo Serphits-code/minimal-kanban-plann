@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import { useBoards, useGlobalCards, useTags, useCards } from '@/hooks/useKanban'
+import { useBoards, useTags, useCards } from '@/hooks/useKanban'
 import { useTheme } from '@/hooks/useTheme'
 import { BoardSelector } from '@/components/kanban/BoardSelector'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
@@ -18,10 +18,10 @@ type ViewMode = 'kanban' | 'planner'
 function App() {
   const { theme, toggleTheme } = useTheme()
   const { boards, activeBoard, setActiveBoard, createBoard, addColumn, updateColumn, deleteColumn, reorderColumns } = useBoards()
-  const { cards: allCards, updateCard, deleteCard } = useGlobalCards()
   const { tags, createTag } = useTags()
-  // Get board-specific functions for card creation and movement
-  const { createCard, moveCard, reorderCard } = useCards(activeBoard)
+  // Get board-specific functions and all cards
+  const { cards: boardCards, getAllCards, createCard, updateCard, deleteCard, moveCard, reorderCard } = useCards(activeBoard)
+  const allCards = getAllCards()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
@@ -65,7 +65,6 @@ function App() {
   }
 
   const handleScheduleCard = (cardId: string, date: string, time: string) => {
-    // Use the global updateCard function that works with any card
     updateCard(cardId, { scheduledDate: date, scheduledTime: time })
     toast.success(date && time ? 'Card agendado!' : 'Card desagendado!')
   }

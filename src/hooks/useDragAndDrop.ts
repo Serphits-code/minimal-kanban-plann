@@ -18,6 +18,8 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
   })
 
   const handleDragStart = (card: CardType, event: React.DragEvent<HTMLElement>, cardIndex: number) => {
+    console.log('Drag start:', card.id, cardIndex)
+    
     // Prevent default to ensure we control the drag behavior
     event.dataTransfer.effectAllowed = 'move'
     
@@ -38,6 +40,7 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
   }
 
   const handleDragEnd = (event: React.DragEvent<HTMLElement>) => {
+    console.log('Drag end')
     setDragState({
       isDragging: false,
       draggedCard: null,
@@ -55,13 +58,18 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     event.preventDefault()
     event.stopPropagation()
     
+    console.log('Drop event:', { targetColumn, targetIndex, dragState })
+    
     // Get the dragged card from state - this is more reliable than dataTransfer
     if (!dragState.draggedCard) {
+      console.log('No dragged card found in state')
       return
     }
     
     const cardId = dragState.draggedCard.id
     const sourceColumn = dragState.draggedCard.column
+    
+    console.log('Moving card:', { cardId, sourceColumn, targetColumn, targetIndex })
     
     // Calculate the target index
     let newIndex = targetIndex
@@ -71,8 +79,18 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
       newIndex = Math.max(0, newIndex - 1)
     }
     
+    console.log('Final move parameters:', { cardId, targetColumn, newIndex })
+    
     // Call the move function
     onCardMove(cardId, targetColumn, newIndex)
+    
+    // Reset drag state
+    setDragState({
+      isDragging: false,
+      draggedCard: null,
+      draggedFrom: null,
+      draggedIndex: null
+    })
   }
 
   const handleCardDrop = (targetColumn: string, targetIndex: number, event: React.DragEvent<HTMLElement>) => {
