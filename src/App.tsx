@@ -32,7 +32,7 @@ function App() {
   }
 
   // Always get the fresh card data from the store
-  const currentSelectedCard = selectedCard && cards.find(c => c.id === selectedCard.id)
+  const currentSelectedCard = selectedCard ? cards.find(c => c.id === selectedCard.id) || selectedCard : null
 
   const handleSaveCard = (card: CardType) => {
     updateCard(card.id, {

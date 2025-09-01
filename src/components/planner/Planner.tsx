@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Card as CardType } from '@/types/kanban'
 import { format, startOfDay, isSameDay, addDays, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { Clock, Calendar as CalendarIcon, CaretLeft, CaretRight, MagnifyingGlass, Funnel } from '@phosphor-icons/react'
 
 interface PlannerProps {
@@ -215,7 +216,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">
-                {formatDateLabel(selectedDate)} - {format(selectedDate, "dd 'de' MMMM")}
+                {formatDateLabel(selectedDate)} - {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
               </CardTitle>
               <Badge variant="outline" className="text-xs">
                 {scheduledCards.length} cards agendados
@@ -223,21 +224,26 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-96">
+            <ScrollArea className="h-80">
               <div className="space-y-1">
                 {workingHours.map(time => {
                   const cardsAtTime = getCardsForTime(time)
+                  const isCurrentHour = new Date().getHours() === parseInt(time.split(':')[0])
                   
                   return (
                     <div
                       key={time}
-                      className={`flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-muted/30 min-h-14 ${
-                        cardsAtTime.length > 0 ? 'bg-muted/20' : ''
-                      }`}
+                      className={`flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-muted/50 min-h-16 border ${
+                        cardsAtTime.length > 0 ? 'bg-muted/20 border-muted' : 'border-transparent'
+                      } ${isCurrentHour && isToday(selectedDate) ? 'ring-2 ring-accent bg-accent/5' : ''}`}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(time, e)}
                     >
-                      <div className="w-16 text-sm font-mono text-muted-foreground flex-shrink-0 text-center py-1">
+                      <div className={`w-16 text-sm font-mono flex-shrink-0 text-center py-1 ${
+                        isCurrentHour && isToday(selectedDate) 
+                          ? 'text-accent-foreground font-semibold' 
+                          : 'text-muted-foreground'
+                      }`}>
                         {time}
                       </div>
                       
@@ -255,10 +261,12 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                         ))}
                         
                         {cardsAtTime.length === 0 && (
-                          <div className={`h-8 border border-dashed transition-all rounded-lg ${
-                            draggedCard ? 'border-primary bg-primary/5' : 'border-transparent hover:border-border'
+                          <div className={`h-10 border border-dashed transition-all rounded-lg flex items-center justify-center ${
+                            draggedCard 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-transparent hover:border-border'
                           }`}>
-                            <div className="text-xs text-muted-foreground/50 text-center leading-8">
+                            <div className="text-xs text-muted-foreground/50">
                               {draggedCard ? 'Soltar card aqui' : ''}
                             </div>
                           </div>
@@ -280,7 +288,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
       <Card className="h-full">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold">
-            Semana de {format(weekDays[0], "dd/MM")} - {format(weekDays[6], "dd/MM")}
+            Semana de {format(weekDays[0], "dd/MM", { locale: ptBR })} - {format(weekDays[6], "dd/MM", { locale: ptBR })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -299,7 +307,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                 >
                   <div className="text-center mb-2">
                     <div className="text-xs text-muted-foreground">
-                      {format(day, 'EEE')}
+                      {format(day, 'EEE', { locale: ptBR })}
                     </div>
                     <div className={`text-sm font-medium ${isToday(day) ? 'text-accent-foreground' : ''}`}>
                       {format(day, 'dd')}
@@ -468,31 +476,72 @@ interface PlannerCardProps {
 function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTime }: PlannerCardProps) {
   const completedTasks = card.checklist.filter(item => item.completed).length
   const totalTasks = card.checklist.length
+  const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+
+  const isOverdue = card.dueDate && new Date(card.dueDate) < new Date()
+  const isDueToday = card.dueDate && isSameDay(new Date(card.dueDate), new Date())
 
   return (
     <div
       draggable
       onDragStart={(e) => onDragStart(card, e)}
       onDragEnd={onDragEnd}
-      className={`p-3 border rounded-lg cursor-move hover:shadow-md transition-all bg-background ${
+      className={`p-3 border rounded-lg cursor-move hover:shadow-lg transition-all bg-background group hover:border-primary/50 ${
         isDragging ? 'opacity-50 scale-95' : ''
+      } ${isOverdue ? 'border-destructive/50 bg-destructive/5' : ''} ${
+        isDueToday ? 'border-amber-500/50 bg-amber-50' : ''
       }`}
       onClick={() => onEdit(card)}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="font-medium text-sm leading-tight flex-1">{card.title}</h4>
-          {showTime && card.scheduledTime && (
-            <Badge variant="outline" className="text-xs">
-              {card.scheduledTime}
-            </Badge>
-          )}
+          <h4 className="font-medium text-sm leading-tight flex-1 group-hover:text-primary transition-colors">
+            {card.title}
+          </h4>
+          <div className="flex items-center gap-1">
+            {showTime && card.scheduledTime && (
+              <Badge variant="outline" className="text-xs">
+                <Clock size={10} className="mr-1" />
+                {card.scheduledTime}
+              </Badge>
+            )}
+            {isOverdue && (
+              <Badge variant="destructive" className="text-xs">
+                Vencido
+              </Badge>
+            )}
+            {isDueToday && !isOverdue && (
+              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                Hoje
+              </Badge>
+            )}
+          </div>
         </div>
         
         {card.description && (
-          <p className="text-xs text-muted-foreground line-clamp-1">
+          <p className="text-xs text-muted-foreground line-clamp-2">
             {card.description}
           </p>
+        )}
+
+        {/* Progress bar for checklist */}
+        {totalTasks > 0 && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {completedTasks}/{totalTasks} tarefas
+              </span>
+              <span className="text-muted-foreground">
+                {Math.round(progressPercentage)}%
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-1.5">
+              <div 
+                className="bg-accent h-1.5 rounded-full transition-all"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+          </div>
         )}
 
         <div className="flex items-center justify-between">
@@ -501,26 +550,23 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
               <Badge
                 key={tag.id}
                 variant="secondary"
-                className="text-xs px-1 py-0"
+                className="text-xs px-1.5 py-0"
                 style={{ backgroundColor: tag.color + '20', color: tag.color }}
               >
                 {tag.name}
               </Badge>
             ))}
             {card.tags.length > 2 && (
-              <Badge variant="secondary" className="text-xs px-1 py-0">
+              <Badge variant="secondary" className="text-xs px-1.5 py-0">
                 +{card.tags.length - 2}
               </Badge>
             )}
           </div>
 
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {totalTasks > 0 && (
-              <span>{completedTasks}/{totalTasks}</span>
-            )}
-            {card.dueDate && (
+            {card.dueDate && !isDueToday && !isOverdue && (
               <div className="flex items-center gap-1">
-                <Clock size={10} />
+                <CalendarIcon size={10} />
                 {format(new Date(card.dueDate), 'dd/MM')}
               </div>
             )}

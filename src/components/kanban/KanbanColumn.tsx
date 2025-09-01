@@ -70,7 +70,7 @@ export function KanbanColumn({
       >
         {cards.map(card => (
           <KanbanCard
-            key={`${card.id}-${card.title}-${card.description}-${card.tags.length}-${card.checklist.length}-${card.dueDate}-${card.scheduledDate}-${card.scheduledTime}`}
+            key={card.id}
             card={card}
             onEdit={onEditCard}
             onUpdateCard={onUpdateCard}
