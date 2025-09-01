@@ -47,6 +47,7 @@ function App() {
       description: card.description,
       tags: card.tags,
       checklist: card.checklist,
+      attachments: card.attachments,
       dueDate: card.dueDate,
       scheduledDate: card.scheduledDate,
       scheduledTime: card.scheduledTime

@@ -3,7 +3,7 @@ import { Card as CardType, ChecklistItem } from '@/types/kanban'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calendar, Clock } from '@phosphor-icons/react'
+import { Calendar, Clock, Paperclip } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface KanbanCardProps {
@@ -125,17 +125,26 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
           )}
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            {card.dueDate && (
-              <div className="flex items-center gap-1">
-                <Calendar size={12} />
-                {format(new Date(card.dueDate), 'dd/MM')}
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {card.dueDate && (
+                <div className="flex items-center gap-1">
+                  <Calendar size={12} />
+                  {format(new Date(card.dueDate), 'dd/MM')}
+                </div>
+              )}
+              
+              {card.scheduledDate && card.scheduledTime && (
+                <div className="flex items-center gap-1">
+                  <Clock size={12} />
+                  {card.scheduledTime}
+                </div>
+              )}
+            </div>
             
-            {card.scheduledDate && card.scheduledTime && (
+            {card.attachments && card.attachments.length > 0 && (
               <div className="flex items-center gap-1">
-                <Clock size={12} />
-                {card.scheduledTime}
+                <Paperclip size={12} />
+                <span>{card.attachments.length}</span>
               </div>
             )}
           </div>

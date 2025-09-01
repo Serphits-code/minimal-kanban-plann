@@ -4,6 +4,15 @@ export interface ChecklistItem {
   completed: boolean
 }
 
+export interface Attachment {
+  id: string
+  name: string
+  size: number
+  type: string
+  url: string
+  createdAt: string
+}
+
 export interface Tag {
   id: string
   name: string
@@ -22,6 +31,7 @@ export interface Card {
   description?: string
   tags: Tag[]
   checklist: ChecklistItem[]
+  attachments: Attachment[]
   dueDate?: string
   scheduledDate?: string
   scheduledTime?: string

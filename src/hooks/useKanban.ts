@@ -143,12 +143,19 @@ export function useBoards() {
 export function useCards(boardId: string) {
   const [cards, setCards] = useKV<Card[]>('kanban-cards', [])
   
-  // Migrate cards without order property
+  // Migrate cards without order property and attachments
   const migratedCards = cards.map((card, index) => {
+    let migratedCard = { ...card }
+    
     if (card.order === undefined) {
-      return { ...card, order: index }
+      migratedCard.order = index
     }
-    return card
+    
+    if (!card.attachments) {
+      migratedCard.attachments = []
+    }
+    
+    return migratedCard
   })
 
   // Update cards if migration occurred
@@ -172,6 +179,7 @@ export function useCards(boardId: string) {
         description: '',
         tags: [],
         checklist: [],
+        attachments: [],
         column: columnId,
         boardId,
         order: maxOrder + 1,

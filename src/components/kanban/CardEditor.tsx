@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Card as CardType, Tag, ChecklistItem } from '@/types/kanban'
-import React, { useState, useEffect } from 'react'
-import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon } from '@phosphor-icons/react'
+import { Card as CardType, Tag, ChecklistItem, Attachment } from '@/types/kanban'
+import React, { useState, useEffect, useRef } from 'react'
+import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon, Paperclip, Download, FileText, Image, Video, Music } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface CardEditorProps {
@@ -39,6 +39,7 @@ export function CardEditor({
   const [description, setDescription] = useState('')
   const [selectedTags, setSelectedTags] = useState<Tag[]>([])
   const [checklist, setChecklist] = useState<ChecklistItem[]>([])
+  const [attachments, setAttachments] = useState<Attachment[]>([])
   const [dueDate, setDueDate] = useState<Date | undefined>()
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>()
   const [scheduledTime, setScheduledTime] = useState('')
@@ -46,6 +47,7 @@ export function CardEditor({
   const [showTagCreator, setShowTagCreator] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (card && isOpen) {
@@ -54,6 +56,7 @@ export function CardEditor({
       setDescription(card.description || '')
       setSelectedTags(card.tags || [])
       setChecklist([...card.checklist] || []) // Create new array to force re-render
+      setAttachments([...card.attachments] || [])
       setDueDate(card.dueDate ? new Date(card.dueDate) : undefined)
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
@@ -63,6 +66,7 @@ export function CardEditor({
       setDescription('')
       setSelectedTags([])
       setChecklist([])
+      setAttachments([])
       setDueDate(undefined)
       setScheduledDate(undefined)
       setScheduledTime('')
@@ -78,6 +82,7 @@ export function CardEditor({
       description,
       tags: selectedTags,
       checklist,
+      attachments,
       dueDate: dueDate?.toISOString(),
       scheduledDate: scheduledDate?.toISOString(),
       scheduledTime
@@ -123,6 +128,67 @@ export function CardEditor({
       setNewTagName('')
       setShowTagCreator(false)
     }
+  }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files) return
+
+    Array.from(files).forEach(file => {
+      // Create object URL for the file
+      const url = URL.createObjectURL(file)
+      
+      const newAttachment: Attachment = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url,
+        createdAt: new Date().toISOString()
+      }
+
+      setAttachments(current => [...current, newAttachment])
+    })
+
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const removeAttachment = (attachmentId: string) => {
+    setAttachments(current => {
+      const attachment = current.find(a => a.id === attachmentId)
+      if (attachment) {
+        // Revoke the object URL to free memory
+        URL.revokeObjectURL(attachment.url)
+      }
+      return current.filter(a => a.id !== attachmentId)
+    })
+  }
+
+  const downloadAttachment = (attachment: Attachment) => {
+    const link = document.createElement('a')
+    link.href = attachment.url
+    link.download = attachment.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return <Image size={16} />
+    if (type.startsWith('video/')) return <Video size={16} />
+    if (type.startsWith('audio/')) return <Music size={16} />
+    return <FileText size={16} />
   }
 
   if (!card) return null
@@ -264,6 +330,61 @@ export function CardEditor({
               />
               <Button onClick={addChecklistItem}>
                 <Plus size={14} />
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Anexos</label>
+            <div className="space-y-2 mb-3">
+              {attachments.map(attachment => (
+                <div key={attachment.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                  <div className="text-muted-foreground">
+                    {getFileIcon(attachment.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">{attachment.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatFileSize(attachment.size)}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => downloadAttachment(attachment)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Download size={14} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Paperclip size={14} />
+                Adicionar Anexo
               </Button>
             </div>
           </div>

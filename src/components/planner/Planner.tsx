@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card as CardType } from '@/types/kanban'
 import { format, startOfDay, isSameDay, addDays, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Clock, Calendar as CalendarIcon, CaretLeft, CaretRight, MagnifyingGlass, Funnel } from '@phosphor-icons/react'
+import { Clock, Calendar as CalendarIcon, CaretLeft, CaretRight, MagnifyingGlass, Funnel, Paperclip } from '@phosphor-icons/react'
 
 interface PlannerProps {
   cards: CardType[]
@@ -44,7 +44,8 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
     return cards.filter(card => 
       card.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       card.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      card.tags.some(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      card.tags.some(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      card.attachments?.some(attachment => attachment.name.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   }, [cards, searchQuery])
 
@@ -134,8 +135,9 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
     const today = filteredCards.filter(card => 
       card.scheduledDate && isSameDay(new Date(card.scheduledDate), new Date())
     ).length
+    const withAttachments = filteredCards.filter(card => card.attachments && card.attachments.length > 0).length
     
-    return { total, scheduled, today, unscheduled: total - scheduled }
+    return { total, scheduled, today, unscheduled: total - scheduled, withAttachments }
   }
 
   const stats = getCardStats()
@@ -218,6 +220,11 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                 <div className="font-semibold text-lg text-destructive">{stats.unscheduled}</div>
                 <div className="text-muted-foreground text-xs">Livres</div>
               </div>
+            </div>
+            
+            <div className="text-center p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+              <div className="font-semibold text-lg text-orange-600">{stats.withAttachments}</div>
+              <div className="text-muted-foreground text-xs">Com Anexos</div>
             </div>
           </CardContent>
         </Card>
@@ -590,6 +597,13 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
               <div className="flex items-center gap-1">
                 <CalendarIcon size={10} />
                 {format(new Date(card.dueDate), 'dd/MM')}
+              </div>
+            )}
+            
+            {card.attachments && card.attachments.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Paperclip size={10} />
+                <span>{card.attachments.length}</span>
               </div>
             )}
           </div>
