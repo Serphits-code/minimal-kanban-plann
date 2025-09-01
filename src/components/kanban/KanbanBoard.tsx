@@ -59,7 +59,7 @@ export function KanbanBoard({
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-6 pb-2 flex-shrink-0">
         <h2 className="text-lg font-semibold">Quadro</h2>
         <Button
@@ -73,9 +73,9 @@ export function KanbanBoard({
         </Button>
       </div>
 
-      {/* Next Task Section */}
+      {/* Next Task Section - Fixed at top */}
       {nextTask && (
-        <div className="px-6 pb-4 flex-shrink-0">
+        <div className="px-6 pb-4 flex-shrink-0 sticky top-0 bg-background z-10 border-b">
           <Card className="p-4 bg-accent/10 border-accent">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -85,8 +85,10 @@ export function KanbanBoard({
                 <div>
                   <h3 className="font-medium text-sm text-accent-foreground">Próxima tarefa a fazer</h3>
                   <p className="text-foreground font-medium">{nextTask.title}</p>
-                  {nextTask.description && (
-                    <p className="text-muted-foreground text-sm mt-1">{nextTask.description}</p>
+                  {nextTask.scheduledDate && nextTask.scheduledTime && (
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Agendada para {nextTask.scheduledTime}
+                    </p>
                   )}
                 </div>
               </div>

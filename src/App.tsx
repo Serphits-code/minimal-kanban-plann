@@ -90,13 +90,30 @@ function App() {
     toast.success(completed ? 'Tarefa marcada como concluída!' : 'Tarefa marcada como pendente!')
   }
 
-  // Get next task to do (first non-completed task from current board, ordered by creation date)
+  // Get next task to do (first non-completed task from current board, prioritizing scheduled times)
   const getNextTask = () => {
     const boardTasks = allCards
       .filter(card => card.boardId === activeBoard && !card.completed)
+    
+    // First, try to find tasks with scheduled times - get the earliest one
+    const scheduledTasks = boardTasks
+      .filter(card => card.scheduledDate && card.scheduledTime)
+      .sort((a, b) => {
+        const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`)
+        const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`)
+        return dateA.getTime() - dateB.getTime()
+      })
+    
+    if (scheduledTasks.length > 0) {
+      return scheduledTasks[0]
+    }
+    
+    // If no scheduled tasks, get the oldest created task
+    const unscheduledTasks = boardTasks
+      .filter(card => !card.scheduledDate || !card.scheduledTime)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     
-    return boardTasks[0] || null
+    return unscheduledTasks[0] || null
   }
 
   const nextTask = getNextTask()

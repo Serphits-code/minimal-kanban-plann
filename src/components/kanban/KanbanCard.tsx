@@ -96,7 +96,7 @@ export function KanbanCard({
             
             {card.description && (
               <p className={`text-xs leading-tight ${card.completed ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
-                {card.description}
+                {card.description.length > 60 ? card.description.substring(0, 60) + '...' : card.description}
               </p>
             )}
 
