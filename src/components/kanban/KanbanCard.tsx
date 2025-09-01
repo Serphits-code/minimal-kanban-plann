@@ -28,9 +28,15 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
   }
 
   const handleClick = (e: React.MouseEvent) => {
-    // Prevent triggering edit during drag operations
+    // Prevent triggering edit during drag operations or if clicking on interactive elements
     if (isDragging) {
       e.preventDefault()
+      return
+    }
+    
+    // Don't trigger if clicking on checkboxes or other interactive elements
+    const target = e.target as HTMLElement
+    if (target.closest('input[type="checkbox"]') || target.closest('button')) {
       return
     }
     

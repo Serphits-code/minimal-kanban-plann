@@ -35,11 +35,6 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
       sourceColumn: card.column,
       sourceIndex: cardIndex
     }))
-    
-    // Add ghost image styling
-    if (event.currentTarget instanceof HTMLElement) {
-      event.currentTarget.style.opacity = '0.5'
-    }
   }
 
   const handleDragEnd = (event: React.DragEvent<HTMLElement>) => {
@@ -49,11 +44,6 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
       draggedFrom: null,
       draggedIndex: null
     })
-    
-    // Reset opacity
-    if (event.currentTarget instanceof HTMLElement) {
-      event.currentTarget.style.opacity = '1'
-    }
   }
 
   const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
@@ -75,11 +65,6 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     
     // Calculate the target index
     let newIndex = targetIndex
-    
-    // If no specific target index provided, place at the end
-    if (newIndex === undefined) {
-      newIndex = undefined // Let moveCard handle it
-    }
     
     // If moving within the same column, adjust for the removal
     if (sourceColumn === targetColumn && dragState.draggedIndex !== null && newIndex !== undefined && dragState.draggedIndex < newIndex) {

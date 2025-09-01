@@ -218,24 +218,24 @@ export function useCards(boardId: string) {
   }
 
   const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
+    console.log('moveCard called:', { cardId, newColumn, newOrder })
+    
     setCards(current => {
       const cardIndex = current.findIndex(c => c.id === cardId)
       if (cardIndex === -1) {
+        console.log('Card not found:', cardId)
         return current
       }
 
       const card = current[cardIndex]
       const oldColumn = card.column
 
-      // If moving to the same column and no specific order, don't change anything
-      if (oldColumn === newColumn && newOrder === undefined) {
-        return current
-      }
+      console.log('Moving card from', oldColumn, 'to', newColumn)
 
       // Create a new array without the card we're moving
       const otherCards = current.filter(c => c.id !== cardId)
       
-      // Get all cards in the target column
+      // Get all cards in the target column (sorted by order)
       const targetColumnCards = otherCards.filter(c => 
         c.boardId === boardId && c.column === newColumn
       ).sort((a, b) => a.order - b.order)
@@ -245,6 +245,8 @@ export function useCards(boardId: string) {
       if (newOrder !== undefined) {
         insertIndex = Math.max(0, Math.min(newOrder, targetColumnCards.length))
       }
+
+      console.log('Target column has', targetColumnCards.length, 'cards, inserting at index', insertIndex)
 
       // Create updated card
       const updatedCard = { ...card, column: newColumn }
@@ -276,11 +278,14 @@ export function useCards(boardId: string) {
         c.boardId !== boardId || (c.column !== newColumn && c.column !== oldColumn)
       )
 
-      return [
+      const result = [
         ...unchangedCards,
         ...reorderedTargetCards,
         ...reorderedSourceCards
       ]
+
+      console.log('Updated cards count:', result.length)
+      return result
     })
   }
 

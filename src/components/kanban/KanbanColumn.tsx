@@ -13,7 +13,7 @@ interface KanbanColumnProps {
   onEditCard: (card: CardType) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onDragOver: (event: React.DragEvent<HTMLElement>) => void
-  onDrop: (column: string, event: React.DragEvent<HTMLElement>) => void
+  onDrop: (column: string, event: React.DragEvent<HTMLElement>, targetIndex?: number) => void
   onDragStart: (card: CardType, event: React.DragEvent<HTMLElement>, index: number) => void
   onDragEnd: (event: React.DragEvent<HTMLElement>) => void
   draggedCardId: string | null
@@ -62,7 +62,6 @@ export function KanbanColumn({
     e.preventDefault()
     e.stopPropagation()
     
-    // Call the drop handler with the specific index
     onDrop(columnId, e, index)
     setDragOverIndex(null)
   }

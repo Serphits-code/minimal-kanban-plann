@@ -72,9 +72,6 @@ function App() {
 
   const activeBoardData = boards.find(board => board.id === activeBoard)
   
-  // Filter cards for the active board
-  const boardCards = allCards.filter(card => card.boardId === activeBoard)
-  
   // Get columns for the active board (with fallback to default columns for old boards)
   const boardColumns = activeBoardData?.columns || [
     { id: 'todo', name: 'A Fazer', order: 0 },
@@ -139,7 +136,7 @@ function App() {
         {viewMode === 'kanban' ? (
           <KanbanBoard 
             boardId={activeBoard}
-            cards={boardCards}
+            cards={allCards.filter(card => card.boardId === activeBoard)}
             columns={boardColumns}
             onCreateCard={createCard}
             onMoveCard={moveCard}

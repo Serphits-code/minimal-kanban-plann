@@ -36,6 +36,7 @@ export function KanbanBoard({
   onReorderCard
 }: KanbanBoardProps) {
   const [showColumnEditor, setShowColumnEditor] = useState(false)
+  
   const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(onMoveCard)
 
   if (!boardId) {
