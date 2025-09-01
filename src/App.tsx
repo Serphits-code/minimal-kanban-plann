@@ -17,10 +17,10 @@ type ViewMode = 'kanban' | 'planner'
 
 function App() {
   const { theme, toggleTheme } = useTheme()
-  const { boards, activeBoard, setActiveBoard, createBoard, addColumn, updateColumn, deleteColumn, reorderColumns } = useBoards()
+  const { boards, activeBoard, setActiveBoard, createBoard, deleteBoard, addColumn, updateColumn, deleteColumn, reorderColumns } = useBoards()
   const { tags, createTag } = useTags()
   // Get board-specific functions and all cards
-  const { cards: boardCards, getAllCards, createCard, updateCard, deleteCard, moveCard, reorderCard } = useCards(activeBoard)
+  const { cards: boardCards, getAllCards, createCard, updateCard, deleteCard, deleteAllCardsFromBoard, moveCard, reorderCard } = useCards(activeBoard)
   const allCards = getAllCards()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
@@ -29,6 +29,14 @@ function App() {
   const handleCreateBoard = (name: string) => {
     createBoard(name)
     toast.success('Quadro criado com sucesso!')
+  }
+
+  const handleDeleteBoard = (boardId: string) => {
+    // Delete all cards from the board first
+    deleteAllCardsFromBoard(boardId)
+    // Then delete the board
+    deleteBoard(boardId)
+    toast.success('Quadro excluído com sucesso!')
   }
 
   const handleEditCard = (card: CardType) => {
@@ -126,6 +134,7 @@ function App() {
               boards={boards}
               activeBoard={activeBoard}
               onBoardChange={setActiveBoard}
+              onDeleteBoard={handleDeleteBoard}
             />
             <CreateBoardDialog onCreateBoard={handleCreateBoard} />
           </div>

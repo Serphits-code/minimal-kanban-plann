@@ -47,7 +47,9 @@ export function useBoards() {
   const deleteBoard = (boardId: string) => {
     setBoards(current => current.filter(board => board.id !== boardId))
     if (activeBoard === boardId) {
-      setActiveBoard('')
+      // Find the first remaining board or set to empty
+      const remainingBoards = boards.filter(board => board.id !== boardId)
+      setActiveBoard(remainingBoards.length > 0 ? remainingBoards[0].id : '')
     }
   }
 
@@ -202,6 +204,10 @@ export function useCards(boardId: string) {
     setCards(current => current.filter(card => card.id !== cardId))
   }
 
+  const deleteAllCardsFromBoard = (boardId: string) => {
+    setCards(current => current.filter(card => card.boardId !== boardId))
+  }
+
   const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
     console.log('moveCard called:', { cardId, newColumn, newOrder })
     
@@ -309,6 +315,7 @@ export function useCards(boardId: string) {
     createCard,
     updateCard,
     deleteCard,
+    deleteAllCardsFromBoard,
     moveCard,
     reorderCard,
     scheduleCard
