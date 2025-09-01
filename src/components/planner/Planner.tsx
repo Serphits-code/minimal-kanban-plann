@@ -73,14 +73,14 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 space-y-4">
+    <div className="flex flex-col h-full p-4">
+      <div className="space-y-4">
         <Calendar
           mode="single"
           selected={selectedDate}
           onSelect={(date) => date && setSelectedDate(date)}
-          locale={ptBR}
           className="rounded-md border w-full"
+          fixedWeeks
         />
 
         <Card>
@@ -147,10 +147,10 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
         </Card>
       </div>
 
-      <div className="flex-1 border-t">
-        <div className="p-4">
+      <div className="flex-1 border-t mt-4">
+        <div className="pt-4">
           <h3 className="font-medium text-sm mb-3">
-            {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            {format(selectedDate, "dd 'de' MMMM 'de' yyyy")}
           </h3>
           
           <ScrollArea className="h-64">
@@ -202,7 +202,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                             {card.dueDate && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Clock size={10} />
-                                {format(new Date(card.dueDate), 'dd/MM', { locale: ptBR })}
+                                {format(new Date(card.dueDate), 'dd/MM')}
                               </div>
                             )}
                           </div>

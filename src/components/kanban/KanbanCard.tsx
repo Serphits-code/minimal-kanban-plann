@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar, Clock } from '@phosphor-icons/react'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 
 interface KanbanCardProps {
   card: CardType
@@ -97,7 +96,7 @@ export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging, o
           {card.dueDate && (
             <div className="flex items-center gap-1">
               <Calendar size={12} />
-              {format(new Date(card.dueDate), 'dd/MM', { locale: ptBR })}
+              {format(new Date(card.dueDate), 'dd/MM')}
             </div>
           )}
           

@@ -10,7 +10,6 @@ import { Card as CardType, Tag, ChecklistItem } from '@/types/kanban'
 import React, { useState, useEffect } from 'react'
 import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon } from '@phosphor-icons/react'
 import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 
 interface CardEditorProps {
   card: CardType | null
@@ -275,7 +274,7 @@ export function CardEditor({
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start gap-2">
                       <CalendarIcon size={16} />
-                      {dueDate ? format(dueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
+                      {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Selecionar data'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -283,7 +282,6 @@ export function CardEditor({
                       mode="single"
                       selected={dueDate}
                       onSelect={setDueDate}
-                      locale={ptBR}
                     />
                   </PopoverContent>
                 </Popover>
@@ -308,7 +306,7 @@ export function CardEditor({
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="flex-1 justify-start gap-2">
                         <CalendarIcon size={16} />
-                        {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Data'}
+                        {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy') : 'Data'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -316,7 +314,6 @@ export function CardEditor({
                         mode="single"
                         selected={scheduledDate}
                         onSelect={setScheduledDate}
-                        locale={ptBR}
                       />
                     </PopoverContent>
                   </Popover>

@@ -7,9 +7,11 @@ import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { CardEditor } from '@/components/kanban/CardEditor'
 import { Planner } from '@/components/planner/Planner'
 import { Card as CardType } from '@/types/kanban'
-import { Calendar, X } from '@phosphor-icons/react'
+import { Calendar, Kanban } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
+
+type ViewMode = 'kanban' | 'planner'
 
 function App() {
   const { boards, activeBoard, setActiveBoard, createBoard } = useBoards()
@@ -17,7 +19,7 @@ function App() {
   const { tags, createTag } = useTags()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
-  const [isPlannerOpen, setIsPlannerOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban')
 
   const handleCreateBoard = (name: string) => {
     createBoard(name)
@@ -29,8 +31,8 @@ function App() {
     setIsCardEditorOpen(true)
   }
 
-  // Get the current version of the selected card from the store
-  const currentSelectedCard = selectedCard ? cards.find(c => c.id === selectedCard.id) : null
+  // Always get the fresh card data from the store
+  const currentSelectedCard = selectedCard && cards.find(c => c.id === selectedCard.id)
 
   const handleSaveCard = (card: CardType) => {
     updateCard(card.id, {
@@ -73,14 +75,26 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button
-              variant={isPlannerOpen ? "default" : "outline"}
-              onClick={() => setIsPlannerOpen(!isPlannerOpen)}
-              className="gap-2"
-            >
-              <Calendar size={16} />
-              Planejador
-            </Button>
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+              <Button
+                variant={viewMode === 'kanban' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className="gap-2"
+              >
+                <Kanban size={16} />
+                Quadro
+              </Button>
+              <Button
+                variant={viewMode === 'planner' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode('planner')}
+                className="gap-2"
+              >
+                <Calendar size={16} />
+                Planejador
+              </Button>
+            </div>
             <BoardSelector
               boards={boards}
               activeBoard={activeBoard}
@@ -91,43 +105,19 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className={`transition-all duration-300 ease-in-out ${isPlannerOpen ? 'flex-1' : 'w-full'}`}>
+      <div className="flex-1 overflow-hidden">
+        {viewMode === 'kanban' ? (
           <KanbanBoard 
             boardId={activeBoard}
             onEditCard={handleEditCard}
           />
-        </div>
-
-        <div className={`transition-all duration-300 ease-in-out border-l bg-card flex flex-col shadow-lg ${
-          isPlannerOpen ? 'w-96 opacity-100' : 'w-0 opacity-0 overflow-hidden'
-        }`}>
-          {isPlannerOpen && (
-            <>
-              <div className="p-4 border-b flex items-center justify-between bg-muted/30">
-                <h2 className="font-semibold flex items-center gap-2">
-                  <Calendar size={18} />
-                  Planejador
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsPlannerOpen(false)}
-                  className="hover:bg-background"
-                >
-                  <X size={16} />
-                </Button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <Planner
-                  cards={cards}
-                  onScheduleCard={handleScheduleCard}
-                  onEditCard={handleEditCard}
-                />
-              </div>
-            </>
-          )}
-        </div>
+        ) : (
+          <Planner
+            cards={cards}
+            onScheduleCard={handleScheduleCard}
+            onEditCard={handleEditCard}
+          />
+        )}
       </div>
 
       <CardEditor
