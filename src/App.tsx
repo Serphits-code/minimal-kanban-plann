@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useBoards, useCards, useTags } from '@/hooks/useKanban'
+import { useBoards, useGlobalCards, useTags } from '@/hooks/useKanban'
 import { BoardSelector } from '@/components/kanban/BoardSelector'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
@@ -15,11 +15,8 @@ type ViewMode = 'kanban' | 'planner'
 
 function App() {
   const { boards, activeBoard, setActiveBoard, createBoard } = useBoards()
-  const { cards, updateCard, deleteCard, scheduleCard, getAllCards } = useCards(activeBoard)
+  const { cards: allCards, updateCard, deleteCard } = useGlobalCards()
   const { tags, createTag } = useTags()
-  
-  // Get all cards for planner (across all boards)
-  const allCards = getAllCards()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')

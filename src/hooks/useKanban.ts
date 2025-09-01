@@ -42,6 +42,29 @@ export function useBoards() {
   }
 }
 
+// Global cards hook for managing all cards across boards
+export function useGlobalCards() {
+  const [cards, setCards] = useKV<Card[]>('kanban-cards', [])
+
+  const updateCard = (cardId: string, updates: Partial<Card>) => {
+    setCards(current =>
+      current.map(card =>
+        card.id === cardId ? { ...card, ...updates } : card
+      )
+    )
+  }
+
+  const deleteCard = (cardId: string) => {
+    setCards(current => current.filter(card => card.id !== cardId))
+  }
+
+  return {
+    cards,
+    updateCard,
+    deleteCard
+  }
+}
+
 export function useCards(boardId: string) {
   const [cards, setCards] = useKV<Card[]>('kanban-cards', [])
   
