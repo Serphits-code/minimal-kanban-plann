@@ -62,11 +62,20 @@ export function KanbanColumn({
     e.preventDefault()
     e.stopPropagation()
     
-    const draggedCardId = e.dataTransfer.getData('cardId')
-    const sourceColumn = e.dataTransfer.getData('sourceColumn')
+    // Use a more robust way to get drag data
+    let cardId = e.dataTransfer.getData('text/plain')
+    if (!cardId) {
+      try {
+        const dragData = JSON.parse(e.dataTransfer.getData('application/json'))
+        cardId = dragData.cardId
+      } catch {
+        // If we can't get the cardId, don't proceed
+        return
+      }
+    }
     
-    if (draggedCardId && (sourceColumn !== columnId || index !== null)) {
-      // Custom drop handling for reordering
+    if (cardId) {
+      // Call the drop handler with the column and index
       onDrop(columnId, e)
     }
     

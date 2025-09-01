@@ -26,6 +26,9 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     })
     
     event.dataTransfer.effectAllowed = 'move'
+    
+    // Set multiple formats for better compatibility
+    event.dataTransfer.setData('text/plain', card.id)
     event.dataTransfer.setData('application/json', JSON.stringify({
       cardId: card.id,
       sourceColumn: card.column,
@@ -60,48 +63,44 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
   const handleDrop = (targetColumn: string, event: React.DragEvent<HTMLElement>, targetIndex?: number) => {
     event.preventDefault()
     
-    try {
-      const dragData = JSON.parse(event.dataTransfer.getData('application/json'))
-      const { cardId, sourceColumn, sourceIndex } = dragData
+    // Get the dragged card from state
+    if (!dragState.draggedCard) return
+    
+    const cardId = dragState.draggedCard.id
+    const sourceColumn = dragState.draggedCard.column
+    const sourceIndex = dragState.draggedIndex
+    
+    let newIndex = targetIndex
+    
+    // If no specific target index provided, determine it from drop position
+    if (newIndex === undefined) {
+      const dropZone = event.currentTarget as HTMLElement
+      // Look for card elements more broadly
+      const cardElements = Array.from(dropZone.querySelectorAll('[data-card-id]'))
       
-      if (!cardId) return
+      newIndex = cardElements.length
       
-      let newIndex = targetIndex
-      
-      // If no specific target index provided, determine it from drop position
-      if (newIndex === undefined) {
-        const dropZone = event.currentTarget as HTMLElement
-        const cardElements = Array.from(dropZone.children).filter(child => 
-          child.hasAttribute('data-card-id')
-        )
+      // Find insertion point based on mouse Y position
+      for (let i = 0; i < cardElements.length; i++) {
+        const cardElement = cardElements[i] as HTMLElement
+        const rect = cardElement.getBoundingClientRect()
+        const cardMiddle = rect.top + rect.height / 2
         
-        newIndex = cardElements.length
-        
-        // Find insertion point based on mouse Y position
-        for (let i = 0; i < cardElements.length; i++) {
-          const cardElement = cardElements[i] as HTMLElement
-          const rect = cardElement.getBoundingClientRect()
-          const cardMiddle = rect.top + rect.height / 2
-          
-          if (event.clientY < cardMiddle) {
-            newIndex = i
-            break
-          }
+        if (event.clientY < cardMiddle) {
+          newIndex = i
+          break
         }
       }
-      
-      // Adjust index if moving within same column
-      if (sourceColumn === targetColumn && sourceIndex < newIndex) {
-        newIndex = Math.max(0, newIndex - 1)
-      }
-      
-      // Only move if position actually changed
-      if (sourceColumn !== targetColumn || sourceIndex !== newIndex) {
-        onCardMove(cardId, targetColumn, newIndex)
-      }
-      
-    } catch (error) {
-      console.error('Error parsing drag data:', error)
+    }
+    
+    // Adjust index if moving within same column
+    if (sourceColumn === targetColumn && sourceIndex !== null && sourceIndex < newIndex) {
+      newIndex = Math.max(0, newIndex - 1)
+    }
+    
+    // Only move if position actually changed
+    if (sourceColumn !== targetColumn || sourceIndex !== newIndex) {
+      onCardMove(cardId, targetColumn, newIndex)
     }
     
     handleDragEnd(event)

@@ -232,8 +232,11 @@ export function useCards(boardId: string) {
       // Determine the insertion index
       const insertIndex = newOrder !== undefined ? Math.max(0, Math.min(newOrder, targetColumnCards.length)) : targetColumnCards.length
       
+      // Create the updated card with new column
+      const updatedCard = { ...card, column: newColumn }
+      
       // Insert the card at the new position
-      targetColumnCards.splice(insertIndex, 0, { ...card, column: newColumn })
+      targetColumnCards.splice(insertIndex, 0, updatedCard)
       
       // Reorder all cards in the target column
       const reorderedTargetCards = targetColumnCards.map((c, index) => ({
@@ -241,22 +244,33 @@ export function useCards(boardId: string) {
         order: index
       }))
 
-      // Reorder cards in other columns of the same board to maintain consistency
+      // Get all other cards (from other boards and other columns from same board)
       const otherBoardCards = otherCards.filter(c => 
+        c.boardId !== boardId
+      )
+      
+      const otherColumnCards = otherCards.filter(c => 
         c.boardId === boardId && c.column !== newColumn
       )
       
-      const reorderedOtherBoardCards = otherBoardCards.map(c => {
-        const columnCards = otherBoardCards.filter(oc => oc.column === c.column)
-        const columnIndex = columnCards.findIndex(oc => oc.id === c.id)
-        return { ...c, order: columnIndex }
+      // Reorder other columns in the same board to maintain consistency
+      const columnGroups = otherColumnCards.reduce((groups, card) => {
+        if (!groups[card.column]) groups[card.column] = []
+        groups[card.column].push(card)
+        return groups
+      }, {} as Record<string, CardType[]>)
+      
+      const reorderedOtherColumnCards = Object.values(columnGroups).flat().map((card, index, array) => {
+        const columnCards = array.filter(c => c.column === card.column)
+        const columnIndex = columnCards.findIndex(c => c.id === card.id)
+        return { ...card, order: columnIndex }
       })
 
       // Combine all cards
       return [
-        ...current.filter(c => c.boardId !== boardId),
+        ...otherBoardCards,
         ...reorderedTargetCards,
-        ...reorderedOtherBoardCards
+        ...reorderedOtherColumnCards
       ]
     })
   }
