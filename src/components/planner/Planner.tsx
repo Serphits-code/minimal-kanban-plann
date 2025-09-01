@@ -267,21 +267,21 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
                 <div className="text-muted-foreground text-xs">Total</div>
               </div>
               <div className="text-center p-2 bg-accent/10 border border-accent/20 rounded-lg">
-                <div className="font-semibold text-lg text-slate-950">{stats.scheduled}</div>
+                <div className="font-semibold text-lg text-foreground">{stats.scheduled}</div>
                 <div className="text-muted-foreground text-xs">Agendados</div>
               </div>
               <div className="text-center p-2 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="font-semibold text-lg text-slate-950">{stats.today}</div>
+                <div className="font-semibold text-lg text-foreground">{stats.today}</div>
                 <div className="text-muted-foreground text-xs">Hoje</div>
               </div>
               <div className="text-center p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <div className="font-semibold text-lg text-slate-950">{stats.unscheduled}</div>
+                <div className="font-semibold text-lg text-foreground">{stats.unscheduled}</div>
                 <div className="text-muted-foreground text-xs">Livres</div>
               </div>
             </div>
             
             <div className="text-center p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-              <div className="font-semibold text-lg text-slate-950">{stats.withAttachments}</div>
+              <div className="font-semibold text-lg text-foreground">{stats.withAttachments}</div>
               <div className="text-muted-foreground text-xs">Com Anexos</div>
             </div>
           </CardContent>
