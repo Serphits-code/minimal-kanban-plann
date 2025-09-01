@@ -3,7 +3,7 @@ import { Card as CardType, ChecklistItem } from '@/types/kanban'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calendar, Clock, Paperclip } from '@phosphor-icons/react'
+import { Calendar, Clock, Paperclip, Image } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface KanbanCardProps {
@@ -19,6 +19,8 @@ interface KanbanCardProps {
 export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDragging, onUpdateCard }: KanbanCardProps) {
   const completedItems = card.checklist.filter(item => item.completed).length
   const totalItems = card.checklist.length
+  const imageAttachments = card.attachments?.filter(att => att.type.startsWith('image/')) || []
+  const otherAttachments = card.attachments?.filter(att => !att.type.startsWith('image/')) || []
 
   const handleChecklistChange = (itemId: string, completed: boolean) => {
     const updatedChecklist = card.checklist.map(item =>
@@ -124,6 +126,27 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
             </div>
           )}
 
+          {imageAttachments.length > 0 && (
+            <div className="mb-3">
+              <div className="grid grid-cols-2 gap-1">
+                {imageAttachments.slice(0, 4).map(attachment => (
+                  <div key={attachment.id} className="aspect-square rounded overflow-hidden bg-muted">
+                    <img 
+                      src={attachment.url} 
+                      alt={attachment.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+              {imageAttachments.length > 4 && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  +{imageAttachments.length - 4} mais imagens
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               {card.dueDate && (
@@ -141,10 +164,17 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
               )}
             </div>
             
-            {card.attachments && card.attachments.length > 0 && (
+            {otherAttachments.length > 0 && (
               <div className="flex items-center gap-1">
                 <Paperclip size={12} />
-                <span>{card.attachments.length}</span>
+                <span>{otherAttachments.length}</span>
+              </div>
+            )}
+            
+            {imageAttachments.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Image size={12} />
+                <span>{imageAttachments.length}</span>
               </div>
             )}
           </div>

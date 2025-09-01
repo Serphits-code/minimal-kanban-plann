@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Card as CardType, Tag, ChecklistItem, Attachment } from '@/types/kanban'
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon, Paperclip, Download, FileText, Image, Video, Music } from '@phosphor-icons/react'
+import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon, Paperclip, Download, FileText, Image, Video, Music, Eye } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface CardEditorProps {
@@ -47,6 +47,7 @@ export function CardEditor({
   const [showTagCreator, setShowTagCreator] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -189,6 +190,16 @@ export function CardEditor({
     if (type.startsWith('video/')) return <Video size={16} />
     if (type.startsWith('audio/')) return <Music size={16} />
     return <FileText size={16} />
+  }
+
+  const previewImageFile = (attachment: Attachment) => {
+    if (attachment.type.startsWith('image/')) {
+      setPreviewImage(attachment.url)
+    }
+  }
+
+  const isImageFile = (type: string) => {
+    return type.startsWith('image/')
   }
 
   if (!card) return null
@@ -340,7 +351,17 @@ export function CardEditor({
               {attachments.map(attachment => (
                 <div key={attachment.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
                   <div className="text-muted-foreground">
-                    {getFileIcon(attachment.type)}
+                    {isImageFile(attachment.type) ? (
+                      <div className="w-10 h-10 rounded overflow-hidden border">
+                        <img 
+                          src={attachment.url} 
+                          alt={attachment.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      getFileIcon(attachment.type)
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{attachment.name}</div>
@@ -349,11 +370,23 @@ export function CardEditor({
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    {isImageFile(attachment.type) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => previewImageFile(attachment)}
+                        className="h-8 w-8 p-0"
+                        title="Visualizar imagem"
+                      >
+                        <Eye size={14} />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => downloadAttachment(attachment)}
                       className="h-8 w-8 p-0"
+                      title="Baixar arquivo"
                     >
                       <Download size={14} />
                     </Button>
@@ -362,6 +395,7 @@ export function CardEditor({
                       variant="ghost"
                       onClick={() => removeAttachment(attachment.id)}
                       className="h-8 w-8 p-0"
+                      title="Remover anexo"
                     >
                       <X size={14} />
                     </Button>
@@ -489,6 +523,26 @@ export function CardEditor({
               </Button>
             </div>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Image Preview Dialog */}
+    <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle>Visualizar Imagem</DialogTitle>
+        </DialogHeader>
+        <div className="p-6 pt-2">
+          {previewImage && (
+            <div className="flex justify-center">
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
