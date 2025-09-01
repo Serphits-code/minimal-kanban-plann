@@ -28,10 +28,15 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
   }
 
   const handleClick = (e: React.MouseEvent) => {
-    // Only trigger edit if we're not dragging
-    if (!isDragging) {
-      onEdit(card)
+    // Prevent triggering edit during drag operations
+    if (isDragging) {
+      e.preventDefault()
+      return
     }
+    
+    // Stop propagation to prevent parent handlers
+    e.stopPropagation()
+    onEdit(card)
   }
 
   const handleDragStart = (e: React.DragEvent<HTMLElement>) => {
@@ -55,7 +60,7 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
       }`}
       onClick={handleClick}
     >
-      <div className="pointer-events-none">
+      <div>
         <CardHeader className="pb-3">
           <div className="space-y-2">
             <h3 className="font-medium text-sm leading-tight">{card.title}</h3>
@@ -92,7 +97,7 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
               
               <div className="space-y-1">
                 {card.checklist.slice(0, 3).map(item => (
-                  <div key={item.id} className="flex items-center gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                  <div key={item.id} className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={item.completed}
                       onCheckedChange={(checked) => handleChecklistChange(item.id, checked as boolean)}

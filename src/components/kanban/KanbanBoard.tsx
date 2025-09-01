@@ -52,8 +52,8 @@ export function KanbanBoard({
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="flex items-center justify-between p-6 pb-2">
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between p-6 pb-2 flex-shrink-0">
         <h2 className="text-lg font-semibold">Quadro</h2>
         <Button
           variant="outline"
@@ -66,29 +66,31 @@ export function KanbanBoard({
         </Button>
       </div>
 
-      <div className="flex gap-6 p-6 pt-4 min-w-max">
-        {sortedColumns.map((column) => {
-          const columnCards = cards
-            .filter(card => card.column === column.id)
-            .sort((a, b) => a.order - b.order)
+      <div className="flex-1 overflow-auto">
+        <div className="flex gap-6 p-6 pt-4 min-w-max">
+          {sortedColumns.map((column) => {
+            const columnCards = cards
+              .filter(card => card.column === column.id)
+              .sort((a, b) => a.order - b.order)
 
-          return (
-            <KanbanColumn
-              key={column.id}
-              title={column.name}
-              columnId={column.id}
-              cards={columnCards}
-              onCreateCard={onCreateCard}
-              onEditCard={onEditCard}
-              onUpdateCard={onUpdateCard}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              draggedCardId={dragState.draggedCard?.id || null}
-            />
-          )
-        })}
+            return (
+              <KanbanColumn
+                key={column.id}
+                title={column.name}
+                columnId={column.id}
+                cards={columnCards}
+                onCreateCard={onCreateCard}
+                onEditCard={onEditCard}
+                onUpdateCard={onUpdateCard}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                draggedCardId={dragState.draggedCard?.id || null}
+              />
+            )
+          })}
+        </div>
       </div>
 
       <ColumnEditor

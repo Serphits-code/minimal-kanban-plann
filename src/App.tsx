@@ -135,7 +135,7 @@ function App() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {viewMode === 'kanban' ? (
           <KanbanBoard 
             boardId={activeBoard}
@@ -152,11 +152,13 @@ function App() {
             onReorderCard={reorderCard}
           />
         ) : (
-          <Planner
-            cards={allCards}
-            onScheduleCard={handleScheduleCard}
-            onEditCard={handleEditCard}
-          />
+          <div className="h-full overflow-hidden">
+            <Planner
+              cards={allCards}
+              onScheduleCard={handleScheduleCard}
+              onEditCard={handleEditCard}
+            />
+          </div>
         )}
       </div>
 

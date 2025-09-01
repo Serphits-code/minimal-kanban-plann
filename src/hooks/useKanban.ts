@@ -185,23 +185,24 @@ export function useCards(boardId: string) {
   const getAllCards = () => migratedCards
 
   const createCard = (columnId: string, title: string) => {
-    const columnCards = migratedCards.filter(card => card.boardId === boardId && card.column === columnId)
-    const maxOrder = columnCards.length > 0 ? Math.max(...columnCards.map(c => c.order)) : -1
+    setCards(current => {
+      const columnCards = current.filter(card => card.boardId === boardId && card.column === columnId)
+      const maxOrder = columnCards.length > 0 ? Math.max(...columnCards.map(c => c.order)) : -1
 
-    const newCard: Card = {
-      id: crypto.randomUUID(),
-      title,
-      description: '',
-      tags: [],
-      checklist: [],
-      column: columnId,
-      boardId,
-      order: maxOrder + 1,
-      createdAt: new Date().toISOString()
-    }
-    
-    setCards(current => [...current, newCard])
-    return newCard
+      const newCard: Card = {
+        id: crypto.randomUUID(),
+        title,
+        description: '',
+        tags: [],
+        checklist: [],
+        column: columnId,
+        boardId,
+        order: maxOrder + 1,
+        createdAt: new Date().toISOString()
+      }
+      
+      return [...current, newCard]
+    })
   }
 
   const updateCard = (cardId: string, updates: Partial<Card>) => {
@@ -218,65 +219,68 @@ export function useCards(boardId: string) {
 
   const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
     setCards(current => {
-      const card = current.find(c => c.id === cardId)
-      if (!card) {
+      const cardIndex = current.findIndex(c => c.id === cardId)
+      if (cardIndex === -1) {
         return current
       }
 
-      // Remove the card from its current position
+      const card = current[cardIndex]
+      const oldColumn = card.column
+
+      // If moving to the same column and no specific order, don't change anything
+      if (oldColumn === newColumn && newOrder === undefined) {
+        return current
+      }
+
+      // Create a new array without the card we're moving
       const otherCards = current.filter(c => c.id !== cardId)
       
-      // Get cards in the target column (excluding the moved card)
+      // Get all cards in the target column
       const targetColumnCards = otherCards.filter(c => 
         c.boardId === boardId && c.column === newColumn
       ).sort((a, b) => a.order - b.order)
 
-      // Determine the insertion index
-      const insertIndex = newOrder !== undefined ? Math.max(0, Math.min(newOrder, targetColumnCards.length)) : targetColumnCards.length
-      
-      // Create the updated card with new column
+      // Determine insertion position
+      let insertIndex = targetColumnCards.length
+      if (newOrder !== undefined) {
+        insertIndex = Math.max(0, Math.min(newOrder, targetColumnCards.length))
+      }
+
+      // Create updated card
       const updatedCard = { ...card, column: newColumn }
       
-      // Insert the card at the new position
+      // Insert the card at the correct position
       targetColumnCards.splice(insertIndex, 0, updatedCard)
       
-      // Reorder all cards in the target column
+      // Update orders for all cards in target column
       const reorderedTargetCards = targetColumnCards.map((c, index) => ({
         ...c,
         order: index
       }))
 
-      // Get all other cards (from other boards and other columns from same board)
-      const otherBoardCards = otherCards.filter(c => 
-        c.boardId !== boardId
-      )
-      
-      const otherColumnCards = otherCards.filter(c => 
-        c.boardId === boardId && c.column !== newColumn
-      )
-      
-      // Reorder other columns in the same board to maintain consistency
-      const columnGroups = otherColumnCards.reduce((groups, card) => {
-        if (!groups[card.column]) groups[card.column] = []
-        groups[card.column].push(card)
-        return groups
-      }, {} as Record<string, Card[]>)
-      
-      const reorderedOtherColumnCards: Card[] = []
-      Object.entries(columnGroups).forEach(([column, columnCards]) => {
-        const sortedCards = columnCards.sort((a, b) => a.order - b.order)
-        sortedCards.forEach((card, index) => {
-          reorderedOtherColumnCards.push({ ...card, order: index })
-        })
-      })
+      // If we moved from a different column, reorder the source column
+      let reorderedSourceCards: Card[] = []
+      if (oldColumn !== newColumn) {
+        const sourceColumnCards = otherCards.filter(c => 
+          c.boardId === boardId && c.column === oldColumn
+        ).sort((a, b) => a.order - b.order)
+        
+        reorderedSourceCards = sourceColumnCards.map((c, index) => ({
+          ...c,
+          order: index
+        }))
+      }
 
-      const result = [
-        ...otherBoardCards,
+      // Keep all other cards unchanged
+      const unchangedCards = otherCards.filter(c => 
+        c.boardId !== boardId || (c.column !== newColumn && c.column !== oldColumn)
+      )
+
+      return [
+        ...unchangedCards,
         ...reorderedTargetCards,
-        ...reorderedOtherColumnCards
+        ...reorderedSourceCards
       ]
-
-      return result
     })
   }
 

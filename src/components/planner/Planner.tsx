@@ -472,7 +472,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="p-6 h-full">
+        <div className="p-6 h-full overflow-auto">
           {viewMode === 'day' ? renderDayView() : renderWeekView()}
         </div>
       </div>

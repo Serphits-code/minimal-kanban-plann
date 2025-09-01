@@ -62,28 +62,14 @@ export function KanbanColumn({
     e.preventDefault()
     e.stopPropagation()
     
-    // Use a more robust way to get drag data
-    let cardId = e.dataTransfer.getData('text/plain')
-    if (!cardId) {
-      try {
-        const dragData = JSON.parse(e.dataTransfer.getData('application/json'))
-        cardId = dragData.cardId
-      } catch {
-        // If we can't get the cardId, don't proceed
-        return
-      }
-    }
-    
-    if (cardId) {
-      // Call the drop handler with the specific index
-      onDrop(columnId, e, index)
-    }
-    
+    // Call the drop handler with the specific index
+    onDrop(columnId, e, index)
     setDragOverIndex(null)
   }
 
   const handleColumnDrop = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault()
+    e.stopPropagation()
     // Drop at the end of the column
     onDrop(columnId, e, cards.length)
     setDragOverIndex(null)

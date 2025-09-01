@@ -65,44 +65,28 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     event.preventDefault()
     event.stopPropagation()
     
-    // Get the dragged card from state
+    // Get the dragged card from state - this is more reliable than dataTransfer
     if (!dragState.draggedCard) {
       return
     }
     
     const cardId = dragState.draggedCard.id
     const sourceColumn = dragState.draggedCard.column
-    const sourceIndex = dragState.draggedIndex
     
+    // Calculate the target index
     let newIndex = targetIndex
     
-    // If no specific target index provided, determine it from drop position
+    // If no specific target index provided, place at the end
     if (newIndex === undefined) {
-      const dropZone = event.currentTarget as HTMLElement
-      // Look for card elements more broadly
-      const cardElements = Array.from(dropZone.querySelectorAll('[data-card-id]'))
-      
-      newIndex = cardElements.length
-      
-      // Find insertion point based on mouse Y position
-      for (let i = 0; i < cardElements.length; i++) {
-        const cardElement = cardElements[i] as HTMLElement
-        const rect = cardElement.getBoundingClientRect()
-        const cardMiddle = rect.top + rect.height / 2
-        
-        if (event.clientY < cardMiddle) {
-          newIndex = i
-          break
-        }
-      }
+      newIndex = undefined // Let moveCard handle it
     }
     
-    // Adjust index if moving within same column
-    if (sourceColumn === targetColumn && sourceIndex !== null && sourceIndex < newIndex) {
+    // If moving within the same column, adjust for the removal
+    if (sourceColumn === targetColumn && dragState.draggedIndex !== null && newIndex !== undefined && dragState.draggedIndex < newIndex) {
       newIndex = Math.max(0, newIndex - 1)
     }
     
-    // Always call the move function to trigger state update
+    // Call the move function
     onCardMove(cardId, targetColumn, newIndex)
   }
 
