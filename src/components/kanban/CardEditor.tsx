@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Card as CardType, Tag, ChecklistItem } from '@/types/kanban'
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -48,7 +48,7 @@ export function CardEditor({
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
 
-  useState(() => {
+  useEffect(() => {
     if (card) {
       setTitle(card.title)
       setDescription(card.description || '')

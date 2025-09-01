@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Card as CardType } from '@/types/kanban'
 import { KanbanCard } from './KanbanCard'
 import { Plus } from '@phosphor-icons/react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 
 interface KanbanColumnProps {
   title: string
