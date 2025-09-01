@@ -205,305 +205,309 @@ export function CardEditor({
   if (!card) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar Card</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>Editar Card</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          <div>
-            <label className="text-sm font-medium">Título</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título do card"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Descrição</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição do card"
-              rows={3}
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Tags</label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {selectedTags.map(tag => (
-                <Badge
-                  key={tag.id}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  style={{ backgroundColor: tag.color + '20', color: tag.color }}
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag.name} <X size={12} className="ml-1" />
-                </Badge>
-              ))}
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+            <div>
+              <label className="text-sm font-medium">Título</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título do card"
+              />
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {availableTags
-                  .filter(tag => !selectedTags.find(t => t.id === tag.id))
-                  .map(tag => (
-                    <Badge
-                      key={tag.id}
-                      variant="outline"
-                      className="cursor-pointer hover:bg-muted"
-                      onClick={() => toggleTag(tag)}
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))
-                }
+
+            <div>
+              <label className="text-sm font-medium">Descrição</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descrição do card"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Tags</label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {selectedTags.map(tag => (
+                  <Badge
+                    key={tag.id}
+                    variant="secondary"
+                    className="cursor-pointer"
+                    style={{ backgroundColor: tag.color + '20', color: tag.color }}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag.name} <X size={12} className="ml-1" />
+                  </Badge>
+                ))}
               </div>
               
-              {showTagCreator ? (
-                <div className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Nome da tag"
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <div className="flex gap-1">
-                    {TAG_COLORS.map(color => (
-                      <button
-                        key={color}
-                        className={`w-6 h-6 rounded-full border-2 ${
-                          newTagColor === color ? 'border-foreground' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setNewTagColor(color)}
-                      />
-                    ))}
-                  </div>
-                  <Button size="sm" onClick={createNewTag}>
-                    <Plus size={14} />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setShowTagCreator(false)}>
-                    <X size={14} />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowTagCreator(true)}
-                  className="gap-2"
-                >
-                  <TagIcon size={14} />
-                  Nova Tag
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Checklist</label>
-            <div className="space-y-2 mb-3">
-              {checklist.map(item => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={item.completed}
-                    onCheckedChange={(checked) => 
-                      updateChecklistItem(item.id, { completed: checked as boolean })
-                    }
-                  />
-                  <Input
-                    value={item.text}
-                    onChange={(e) => updateChecklistItem(item.id, { text: e.target.value })}
-                    className="flex-1"
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeChecklistItem(item.id)}
-                  >
-                    <X size={14} />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nova tarefa"
-                value={newChecklistItem}
-                onChange={(e) => setNewChecklistItem(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
-              />
-              <Button onClick={addChecklistItem}>
-                <Plus size={14} />
-              </Button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Anexos</label>
-            <div className="space-y-2 mb-3">
-              {attachments.map(attachment => (
-                <div key={attachment.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-                  <div className="text-muted-foreground">
-                    {isImageFile(attachment.type) ? (
-                      <div className="w-10 h-10 rounded overflow-hidden border">
-                        <img 
-                          src={attachment.url} 
-                          alt={attachment.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      getFileIcon(attachment.type)
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{attachment.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatFileSize(attachment.size)}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    {isImageFile(attachment.type) && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => previewImageFile(attachment)}
-                        className="h-8 w-8 p-0"
-                        title="Visualizar imagem"
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {availableTags
+                    .filter(tag => !selectedTags.find(t => t.id === tag.id))
+                    .map(tag => (
+                      <Badge
+                        key={tag.id}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-muted"
+                        onClick={() => toggleTag(tag)}
                       >
-                        <Eye size={14} />
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => downloadAttachment(attachment)}
-                      className="h-8 w-8 p-0"
-                      title="Baixar arquivo"
-                    >
-                      <Download size={14} />
+                        {tag.name}
+                      </Badge>
+                    ))
+                  }
+                </div>
+                
+                {showTagCreator ? (
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <Input
+                      placeholder="Nome da tag"
+                      value={newTagName}
+                      onChange={(e) => setNewTagName(e.target.value)}
+                      className="flex-1 min-w-[150px]"
+                    />
+                    <div className="flex gap-1 flex-wrap">
+                      {TAG_COLORS.map(color => (
+                        <button
+                          key={color}
+                          className={`w-6 h-6 rounded-full border-2 ${
+                            newTagColor === color ? 'border-foreground' : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setNewTagColor(color)}
+                        />
+                      ))}
+                    </div>
+                    <Button size="sm" onClick={createNewTag}>
+                      <Plus size={14} />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="h-8 w-8 p-0"
-                      title="Remover anexo"
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => setShowTagCreator(false)}>
                       <X size={14} />
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-2"
-              >
-                <Paperclip size={14} />
-                Adicionar Anexo
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Data de Vencimento</label>
-              <div className="flex gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="flex-1 justify-start gap-2">
-                      <CalendarIcon size={16} />
-                      {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Selecionar data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {dueDate && (
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    onClick={() => setDueDate(undefined)}
-                    className="flex-shrink-0"
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowTagCreator(true)}
+                    className="gap-2"
                   >
-                    <X size={16} />
+                    <TagIcon size={14} />
+                    Nova Tag
                   </Button>
                 )}
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Agendar</label>
-              <div className="space-y-2">
+              <label className="text-sm font-medium mb-2 block">Checklist</label>
+              <div className="space-y-2 mb-3">
+                {checklist.map(item => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={item.completed}
+                      onCheckedChange={(checked) => 
+                        updateChecklistItem(item.id, { completed: checked as boolean })
+                      }
+                    />
+                    <Input
+                      value={item.text}
+                      onChange={(e) => updateChecklistItem(item.id, { text: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeChecklistItem(item.id)}
+                      className="flex-shrink-0"
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nova tarefa"
+                  value={newChecklistItem}
+                  onChange={(e) => setNewChecklistItem(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
+                  className="flex-1"
+                />
+                <Button onClick={addChecklistItem} className="flex-shrink-0">
+                  <Plus size={14} />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Anexos</label>
+              <div className="space-y-2 mb-3">
+                {attachments.map(attachment => (
+                  <div key={attachment.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                    <div className="text-muted-foreground flex-shrink-0">
+                      {isImageFile(attachment.type) ? (
+                        <div className="w-10 h-10 rounded overflow-hidden border">
+                          <img 
+                            src={attachment.url} 
+                            alt={attachment.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        getFileIcon(attachment.type)
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{attachment.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatFileSize(attachment.size)}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {isImageFile(attachment.type) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => previewImageFile(attachment)}
+                          className="h-8 w-8 p-0"
+                          title="Visualizar imagem"
+                        >
+                          <Eye size={14} />
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => downloadAttachment(attachment)}
+                        className="h-8 w-8 p-0"
+                        title="Baixar arquivo"
+                      >
+                        <Download size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="h-8 w-8 p-0"
+                        title="Remover anexo"
+                      >
+                        <X size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Paperclip size={14} />
+                  Adicionar Anexo
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Data de Vencimento</label>
                 <div className="flex gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="flex-1 justify-start gap-2">
                         <CalendarIcon size={16} />
-                        {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy') : 'Data'}
+                        {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Selecionar data'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={scheduledDate}
-                        onSelect={setScheduledDate}
+                        selected={dueDate}
+                        onSelect={setDueDate}
                       />
                     </PopoverContent>
                   </Popover>
-                  {scheduledDate && (
+                  {dueDate && (
                     <Button 
                       variant="outline" 
                       size="icon" 
-                      onClick={() => {
-                        setScheduledDate(undefined)
-                        setScheduledTime('')
-                      }}
+                      onClick={() => setDueDate(undefined)}
                       className="flex-shrink-0"
                     >
                       <X size={16} />
                     </Button>
                   )}
                 </div>
-                
-                <div className="flex gap-2">
-                  <Clock size={16} className="mt-2 text-muted-foreground" />
-                  <Input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="flex-1"
-                    disabled={!scheduledDate}
-                  />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Agendar</label>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="flex-1 justify-start gap-2">
+                          <CalendarIcon size={16} />
+                          {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy') : 'Data'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={scheduledDate}
+                          onSelect={setScheduledDate}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {scheduledDate && (
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => {
+                          setScheduledDate(undefined)
+                          setScheduledTime('')
+                        }}
+                        className="flex-shrink-0"
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Clock size={16} className="mt-2 text-muted-foreground flex-shrink-0" />
+                    <Input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="flex-1"
+                      disabled={!scheduledDate}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between">
+          <div className="flex justify-between pt-4 border-t flex-shrink-0">
             <Button
               variant="destructive"
               onClick={() => {
@@ -523,28 +527,28 @@ export function CardEditor({
               </Button>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
-    {/* Image Preview Dialog */}
-    <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle>Visualizar Imagem</DialogTitle>
-        </DialogHeader>
-        <div className="p-6 pt-2">
-          {previewImage && (
-            <div className="flex justify-center">
-              <img 
-                src={previewImage} 
-                alt="Preview" 
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              />
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Visualizar Imagem</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 pt-2">
+            {previewImage && (
+              <div className="flex justify-center">
+                <img 
+                  src={previewImage} 
+                  alt="Preview" 
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
