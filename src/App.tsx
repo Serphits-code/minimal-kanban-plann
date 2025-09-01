@@ -29,6 +29,9 @@ function App() {
     setIsCardEditorOpen(true)
   }
 
+  // Get the current version of the selected card from the store
+  const currentSelectedCard = selectedCard ? cards.find(c => c.id === selectedCard.id) : null
+
   const handleSaveCard = (card: CardType) => {
     updateCard(card.id, {
       title: card.title,
@@ -39,6 +42,8 @@ function App() {
       scheduledDate: card.scheduledDate,
       scheduledTime: card.scheduledTime
     })
+    setSelectedCard(null)
+    setIsCardEditorOpen(false)
     toast.success('Card atualizado!')
   }
 
@@ -126,7 +131,7 @@ function App() {
       </div>
 
       <CardEditor
-        card={selectedCard}
+        card={currentSelectedCard}
         isOpen={isCardEditorOpen}
         onClose={() => {
           setIsCardEditorOpen(false)

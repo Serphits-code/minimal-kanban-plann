@@ -52,8 +52,8 @@ export function CardEditor({
     if (card) {
       setTitle(card.title)
       setDescription(card.description || '')
-      setSelectedTags(card.tags)
-      setChecklist(card.checklist)
+      setSelectedTags(card.tags || [])
+      setChecklist(card.checklist || [])
       setDueDate(card.dueDate ? new Date(card.dueDate) : undefined)
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
@@ -66,7 +66,7 @@ export function CardEditor({
       setScheduledDate(undefined)
       setScheduledTime('')
     }
-  }, [card])
+  }, [card, isOpen]) // Added isOpen as dependency to refresh when dialog opens
 
   const handleSave = () => {
     if (!card || !title.trim()) return
@@ -83,7 +83,6 @@ export function CardEditor({
     }
 
     onSave(updatedCard)
-    onClose()
   }
 
   const addChecklistItem = () => {
