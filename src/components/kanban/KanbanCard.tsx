@@ -126,26 +126,7 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
             </div>
           )}
 
-          {imageAttachments.length > 0 && (
-            <div className="mb-3">
-              <div className="grid grid-cols-2 gap-1">
-                {imageAttachments.slice(0, 4).map(attachment => (
-                  <div key={attachment.id} className="aspect-square rounded overflow-hidden bg-muted">
-                    <img 
-                      src={attachment.url} 
-                      alt={attachment.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-              {imageAttachments.length > 4 && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  +{imageAttachments.length - 4} mais imagens
-                </div>
-              )}
-            </div>
-          )}
+
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
