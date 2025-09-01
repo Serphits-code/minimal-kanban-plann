@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useBoards, useGlobalCards, useTags } from '@/hooks/useKanban'
+import { useBoards, useGlobalCards, useTags, useCards } from '@/hooks/useKanban'
 import { BoardSelector } from '@/components/kanban/BoardSelector'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
@@ -17,6 +17,8 @@ function App() {
   const { boards, activeBoard, setActiveBoard, createBoard } = useBoards()
   const { cards: allCards, updateCard, deleteCard } = useGlobalCards()
   const { tags, createTag } = useTags()
+  // Get board-specific functions for card creation and movement
+  const { createCard, moveCard } = useCards(activeBoard)
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
@@ -66,6 +68,9 @@ function App() {
   }
 
   const activeBoardData = boards.find(board => board.id === activeBoard)
+  
+  // Filter cards for the active board
+  const boardCards = allCards.filter(card => card.boardId === activeBoard)
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -115,6 +120,10 @@ function App() {
         {viewMode === 'kanban' ? (
           <KanbanBoard 
             boardId={activeBoard}
+            cards={boardCards}
+            onCreateCard={createCard}
+            onMoveCard={moveCard}
+            onUpdateCard={updateCard}
             onEditCard={handleEditCard}
           />
         ) : (

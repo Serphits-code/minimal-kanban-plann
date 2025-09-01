@@ -1,16 +1,25 @@
-import { useBoards, useCards } from '@/hooks/useKanban'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { KanbanColumn } from './KanbanColumn'
 import { Card as CardType } from '@/types/kanban'
 
 interface KanbanBoardProps {
   boardId: string
+  cards: CardType[]
+  onCreateCard: (columnId: 'todo' | 'progress' | 'done', title: string) => void
+  onMoveCard: (cardId: string, newColumn: 'todo' | 'progress' | 'done') => void
+  onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onEditCard: (card: CardType) => void
 }
 
-export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
-  const { cards, createCard, moveCard, updateCard } = useCards(boardId)
-  const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(moveCard)
+export function KanbanBoard({ 
+  boardId, 
+  cards, 
+  onCreateCard, 
+  onMoveCard, 
+  onUpdateCard, 
+  onEditCard 
+}: KanbanBoardProps) {
+  const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(onMoveCard)
 
   const todoCards = cards.filter(card => card.column === 'todo')
   const progressCards = cards.filter(card => card.column === 'progress') 
@@ -34,9 +43,9 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           title="A Fazer"
           columnId="todo"
           cards={todoCards}
-          onCreateCard={createCard}
+          onCreateCard={onCreateCard}
           onEditCard={onEditCard}
-          onUpdateCard={updateCard}
+          onUpdateCard={onUpdateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}
@@ -48,9 +57,9 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           title="Em Progresso"
           columnId="progress"
           cards={progressCards}
-          onCreateCard={createCard}
+          onCreateCard={onCreateCard}
           onEditCard={onEditCard}
-          onUpdateCard={updateCard}
+          onUpdateCard={onUpdateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}
@@ -62,9 +71,9 @@ export function KanbanBoard({ boardId, onEditCard }: KanbanBoardProps) {
           title="Concluído"
           columnId="done"
           cards={doneCards}
-          onCreateCard={createCard}
+          onCreateCard={onCreateCard}
           onEditCard={onEditCard}
-          onUpdateCard={updateCard}
+          onUpdateCard={onUpdateCard}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDragStart={handleDragStart}
