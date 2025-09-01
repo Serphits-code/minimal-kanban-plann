@@ -44,6 +44,7 @@ export function CardEditor({
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>()
   const [scheduledTime, setScheduledTime] = useState('')
   const [duration, setDuration] = useState<number>(1)
+  const [completed, setCompleted] = useState(false)
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [showTagCreator, setShowTagCreator] = useState(false)
   const [newTagName, setNewTagName] = useState('')
@@ -63,6 +64,7 @@ export function CardEditor({
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
       setDuration(card.duration || 1)
+      setCompleted(card.completed || false)
     } else if (!isOpen) {
       // Clear state when dialog closes
       setTitle('')
@@ -74,6 +76,7 @@ export function CardEditor({
       setScheduledDate(undefined)
       setScheduledTime('')
       setDuration(1)
+      setCompleted(false)
     }
   }, [card, isOpen])
 
@@ -90,7 +93,8 @@ export function CardEditor({
       dueDate: dueDate?.toISOString(),
       scheduledDate: scheduledDate?.toISOString(),
       scheduledTime,
-      duration
+      duration,
+      completed
     }
 
     onSave(updatedCard)
@@ -234,6 +238,17 @@ export function CardEditor({
                 placeholder="Descrição do card"
                 rows={3}
               />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="card-completed"
+                checked={completed}
+                onCheckedChange={(checked) => setCompleted(Boolean(checked))}
+              />
+              <label htmlFor="card-completed" className="text-sm font-medium cursor-pointer">
+                Tarefa finalizada
+              </label>
             </div>
 
             <div>

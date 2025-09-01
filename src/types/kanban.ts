@@ -39,6 +39,7 @@ export interface Card {
   column: string
   boardId: string
   order: number
+  completed: boolean
   createdAt: string
 }
 

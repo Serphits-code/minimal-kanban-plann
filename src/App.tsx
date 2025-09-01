@@ -59,7 +59,8 @@ function App() {
       dueDate: card.dueDate,
       scheduledDate: card.scheduledDate,
       scheduledTime: card.scheduledTime,
-      duration: card.duration
+      duration: card.duration,
+      completed: card.completed
     })
     
     // Close the dialog and clear selected card
@@ -83,6 +84,22 @@ function App() {
     updateCard(cardId, { duration })
     toast.success(`Duração alterada para ${duration}h`)
   }
+
+  const handleToggleCardCompletion = (cardId: string, completed: boolean) => {
+    updateCard(cardId, { completed })
+    toast.success(completed ? 'Tarefa marcada como concluída!' : 'Tarefa marcada como pendente!')
+  }
+
+  // Get next task to do (first non-completed task from current board, ordered by creation date)
+  const getNextTask = () => {
+    const boardTasks = allCards
+      .filter(card => card.boardId === activeBoard && !card.completed)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    
+    return boardTasks[0] || null
+  }
+
+  const nextTask = getNextTask()
 
   const activeBoardData = boards.find(board => board.id === activeBoard)
   
@@ -153,10 +170,12 @@ function App() {
             boardId={activeBoard}
             cards={allCards.filter(card => card.boardId === activeBoard)}
             columns={boardColumns}
+            nextTask={nextTask}
             onCreateCard={createCard}
             onMoveCard={moveCard}
             onUpdateCard={updateCard}
             onEditCard={handleEditCard}
+            onToggleCardCompletion={handleToggleCardCompletion}
             onAddColumn={(name) => addColumn(activeBoard, name)}
             onUpdateColumn={(columnId, updates) => updateColumn(activeBoard, columnId, updates)}
             onDeleteColumn={(columnId) => deleteColumn(activeBoard, columnId)}

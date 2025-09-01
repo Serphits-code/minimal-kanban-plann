@@ -12,6 +12,7 @@ interface KanbanColumnProps {
   onCreateCard: (columnId: string, title: string) => void
   onEditCard: (card: CardType) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
+  onToggleCardCompletion: (cardId: string, completed: boolean) => void
   onDragOver: (event: React.DragEvent<HTMLElement>) => void
   onDrop: (column: string, event: React.DragEvent<HTMLElement>, targetIndex?: number) => void
   onDragStart: (card: CardType, event: React.DragEvent<HTMLElement>, index: number) => void
@@ -26,6 +27,7 @@ export function KanbanColumn({
   onCreateCard,
   onEditCard,
   onUpdateCard,
+  onToggleCardCompletion,
   onDragOver,
   onDrop,
   onDragStart,
@@ -124,6 +126,7 @@ export function KanbanColumn({
                 index={index}
                 onEdit={onEditCard}
                 onUpdateCard={onUpdateCard}
+                onToggleCardCompletion={onToggleCardCompletion}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 isDragging={draggedCardId === card.id}

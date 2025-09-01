@@ -14,9 +14,19 @@ interface KanbanCardProps {
   onDragEnd: (event: React.DragEvent<HTMLElement>) => void
   isDragging: boolean
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
+  onToggleCardCompletion: (cardId: string, completed: boolean) => void
 }
 
-export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDragging, onUpdateCard }: KanbanCardProps) {
+export function KanbanCard({ 
+  card, 
+  index, 
+  onEdit, 
+  onDragStart, 
+  onDragEnd, 
+  isDragging, 
+  onUpdateCard, 
+  onToggleCardCompletion 
+}: KanbanCardProps) {
   const completedItems = card.checklist.filter(item => item.completed).length
   const totalItems = card.checklist.length
   const imageAttachments = card.attachments?.filter(att => att.type.startsWith('image/')) || []
@@ -71,10 +81,21 @@ export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDrag
       <div>
         <CardHeader className="pb-3">
           <div className="space-y-2">
-            <h3 className="font-medium text-sm leading-tight">{card.title}</h3>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className={`font-medium text-sm leading-tight flex-1 ${card.completed ? 'line-through text-muted-foreground' : ''}`}>
+                {card.title}
+              </h3>
+              <div className="flex items-center gap-1 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={card.completed}
+                  onCheckedChange={(checked) => onToggleCardCompletion(card.id, Boolean(checked))}
+                  className="h-4 w-4"
+                />
+              </div>
+            </div>
             
             {card.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
+              <p className={`text-xs leading-tight ${card.completed ? 'line-through text-muted-foreground' : 'text-muted-foreground'}`}>
                 {card.description}
               </p>
             )}
