@@ -14,8 +14,8 @@ interface KanbanColumnProps {
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onDragOver: (event: React.DragEvent) => void
   onDrop: (column: string, event: React.DragEvent) => void
-  onDragStart: (card: CardType, event: React.DragEvent) => void
-  onDragEnd: () => void
+  onDragStart: (card: CardType, event: React.DragEvent, index: number) => void
+  onDragEnd: (event: React.DragEvent) => void
   draggedCardId: string | null
 }
 
@@ -107,6 +107,7 @@ export function KanbanColumn({
             >
               <KanbanCard
                 card={card}
+                index={index}
                 onEdit={onEditCard}
                 onUpdateCard={onUpdateCard}
                 onDragStart={onDragStart}

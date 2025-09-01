@@ -217,34 +217,48 @@ export function useCards(boardId: string) {
   }
 
   const moveCard = (cardId: string, newColumn: string, newOrder?: number) => {
-    if (newOrder !== undefined) {
-      // Reordering within same column or moving to different column
-      setCards(current => {
-        const card = current.find(c => c.id === cardId)
-        if (!card) return current
+    setCards(current => {
+      const card = current.find(c => c.id === cardId)
+      if (!card) return current
 
-        const otherCards = current.filter(c => c.id !== cardId)
-        const targetColumnCards = otherCards.filter(c => 
-          c.boardId === boardId && c.column === newColumn
-        ).sort((a, b) => a.order - b.order)
+      // Remove the card from its current position
+      const otherCards = current.filter(c => c.id !== cardId)
+      
+      // Get cards in the target column (excluding the moved card)
+      const targetColumnCards = otherCards.filter(c => 
+        c.boardId === boardId && c.column === newColumn
+      ).sort((a, b) => a.order - b.order)
 
-        // Insert at the new position and reorder
-        targetColumnCards.splice(newOrder, 0, { ...card, column: newColumn })
-        
-        const reorderedCards = targetColumnCards.map((c, index) => ({
-          ...c,
-          order: index
-        }))
+      // Determine the insertion index
+      const insertIndex = newOrder !== undefined ? Math.max(0, Math.min(newOrder, targetColumnCards.length)) : targetColumnCards.length
+      
+      // Insert the card at the new position
+      targetColumnCards.splice(insertIndex, 0, { ...card, column: newColumn })
+      
+      // Reorder all cards in the target column
+      const reorderedTargetCards = targetColumnCards.map((c, index) => ({
+        ...c,
+        order: index
+      }))
 
-        return [
-          ...otherCards.filter(c => !(c.boardId === boardId && c.column === newColumn)),
-          ...reorderedCards
-        ]
+      // Reorder cards in other columns of the same board to maintain consistency
+      const otherBoardCards = otherCards.filter(c => 
+        c.boardId === boardId && c.column !== newColumn
+      )
+      
+      const reorderedOtherBoardCards = otherBoardCards.map(c => {
+        const columnCards = otherBoardCards.filter(oc => oc.column === c.column)
+        const columnIndex = columnCards.findIndex(oc => oc.id === c.id)
+        return { ...c, order: columnIndex }
       })
-    } else {
-      // Simple column change
-      updateCard(cardId, { column: newColumn })
-    }
+
+      // Combine all cards
+      return [
+        ...current.filter(c => c.boardId !== boardId),
+        ...reorderedTargetCards,
+        ...reorderedOtherBoardCards
+      ]
+    })
   }
 
   const reorderCard = (cardId: string, newOrder: number) => {

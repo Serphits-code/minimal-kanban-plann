@@ -1,19 +1,22 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { useBoards, useGlobalCards, useTags, useCards } from '@/hooks/useKanban'
+import { useTheme } from '@/hooks/useTheme'
 import { BoardSelector } from '@/components/kanban/BoardSelector'
 import { CreateBoardDialog } from '@/components/kanban/CreateBoardDialog'
 import { KanbanBoard } from '@/components/kanban/KanbanBoard'
 import { CardEditor } from '@/components/kanban/CardEditor'
 import { Planner } from '@/components/planner/Planner'
 import { Card as CardType } from '@/types/kanban'
-import { Calendar, Kanban } from '@phosphor-icons/react'
+import { Calendar, Kanban, Moon, Sun } from '@phosphor-icons/react'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 
 type ViewMode = 'kanban' | 'planner'
 
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const { boards, activeBoard, setActiveBoard, createBoard, addColumn, updateColumn, deleteColumn, reorderColumns } = useBoards()
   const { cards: allCards, updateCard, deleteCard } = useGlobalCards()
   const { tags, createTag } = useTags()
@@ -93,6 +96,15 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Sun size={16} className="text-muted-foreground" />
+              <Switch
+                checked={theme === 'dark'}
+                onCheckedChange={toggleTheme}
+              />
+              <Moon size={16} className="text-muted-foreground" />
+            </div>
+            
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
               <Button
                 variant={viewMode === 'kanban' ? "default" : "ghost"}
@@ -137,6 +149,7 @@ function App() {
             onUpdateColumn={(columnId, updates) => updateColumn(activeBoard, columnId, updates)}
             onDeleteColumn={(columnId) => deleteColumn(activeBoard, columnId)}
             onReorderColumns={(sourceIndex, destinationIndex) => reorderColumns(activeBoard, sourceIndex, destinationIndex)}
+            onReorderCard={reorderCard}
           />
         ) : (
           <Planner

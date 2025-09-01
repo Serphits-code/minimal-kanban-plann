@@ -18,6 +18,7 @@ interface KanbanBoardProps {
   onUpdateColumn: (columnId: string, updates: Partial<Column>) => void
   onDeleteColumn: (columnId: string) => void
   onReorderColumns: (sourceIndex: number, destinationIndex: number) => void
+  onReorderCard: (cardId: string, newOrder: number) => void
 }
 
 export function KanbanBoard({ 
@@ -31,7 +32,8 @@ export function KanbanBoard({
   onAddColumn,
   onUpdateColumn,
   onDeleteColumn,
-  onReorderColumns
+  onReorderColumns,
+  onReorderCard
 }: KanbanBoardProps) {
   const [showColumnEditor, setShowColumnEditor] = useState(false)
   const { dragState, handleDragStart, handleDragEnd, handleDragOver, handleDrop } = useDragAndDrop(onMoveCard)

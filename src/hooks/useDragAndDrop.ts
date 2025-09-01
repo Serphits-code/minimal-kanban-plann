@@ -1,43 +1,54 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { Card as CardType } from '@/types/kanban'
 
 interface DragState {
   isDragging: boolean
   draggedCard: CardType | null
-  dragOffset: { x: number; y: number }
+  draggedFrom: string | null
+  draggedIndex: number | null
 }
 
 export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, newOrder?: number) => void) {
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     draggedCard: null,
-    dragOffset: { x: 0, y: 0 }
+    draggedFrom: null,
+    draggedIndex: null
   })
-  
-  const dragRef = useRef<HTMLDivElement>(null)
 
-  const handleDragStart = (card: CardType, event: React.DragEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const offsetX = event.clientX - rect.left
-    const offsetY = event.clientY - rect.top
-    
+  const handleDragStart = (card: CardType, event: React.DragEvent, cardIndex: number) => {
     setDragState({
       isDragging: true,
       draggedCard: card,
-      dragOffset: { x: offsetX, y: offsetY }
+      draggedFrom: card.column,
+      draggedIndex: cardIndex
     })
     
     event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('cardId', card.id)
-    event.dataTransfer.setData('sourceColumn', card.column)
+    event.dataTransfer.setData('application/json', JSON.stringify({
+      cardId: card.id,
+      sourceColumn: card.column,
+      sourceIndex: cardIndex
+    }))
+    
+    // Add ghost image styling
+    if (event.currentTarget instanceof HTMLElement) {
+      event.currentTarget.style.opacity = '0.5'
+    }
   }
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (event: React.DragEvent) => {
     setDragState({
       isDragging: false,
       draggedCard: null,
-      dragOffset: { x: 0, y: 0 }
+      draggedFrom: null,
+      draggedIndex: null
     })
+    
+    // Reset opacity
+    if (event.currentTarget instanceof HTMLElement) {
+      event.currentTarget.style.opacity = '1'
+    }
   }
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -45,45 +56,58 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     event.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = (column: string, event: React.DragEvent) => {
+  const handleDrop = (targetColumn: string, event: React.DragEvent, targetIndex?: number) => {
     event.preventDefault()
-    const cardId = event.dataTransfer.getData('cardId')
-    const sourceColumn = event.dataTransfer.getData('sourceColumn')
     
-    if (cardId && cardId !== '') {
-      // Calculate drop position for reordering
-      const dropTarget = event.currentTarget as HTMLElement
-      const cards = Array.from(dropTarget.children).filter(child => 
-        child.querySelector('[data-card-id]')
-      )
+    try {
+      const dragData = JSON.parse(event.dataTransfer.getData('application/json'))
+      const { cardId, sourceColumn, sourceIndex } = dragData
       
-      let dropIndex = cards.length
+      if (!cardId) return
       
-      // Find the insertion point based on mouse position
-      for (let i = 0; i < cards.length; i++) {
-        const card = cards[i] as HTMLElement
-        const rect = card.getBoundingClientRect()
-        const cardCenter = rect.top + rect.height / 2
-        
-        if (event.clientY < cardCenter) {
-          dropIndex = i
-          break
-        }
-      }
+      let newIndex = targetIndex
       
-      // If moving within the same column, adjust for the dragged card removal
-      if (sourceColumn === column && dragState.draggedCard) {
-        const draggedIndex = cards.findIndex(card => 
-          card.querySelector(`[data-card-id="${dragState.draggedCard?.id}"]`)
+      // If no specific target index provided, determine it from drop position
+      if (newIndex === undefined) {
+        const dropZone = event.currentTarget as HTMLElement
+        const cardElements = Array.from(dropZone.children).filter(child => 
+          child.hasAttribute('data-card-id')
         )
-        if (draggedIndex !== -1 && draggedIndex < dropIndex) {
-          dropIndex--
+        
+        newIndex = cardElements.length
+        
+        // Find insertion point based on mouse Y position
+        for (let i = 0; i < cardElements.length; i++) {
+          const cardElement = cardElements[i] as HTMLElement
+          const rect = cardElement.getBoundingClientRect()
+          const cardMiddle = rect.top + rect.height / 2
+          
+          if (event.clientY < cardMiddle) {
+            newIndex = i
+            break
+          }
         }
       }
       
-      onCardMove(cardId, column, dropIndex)
+      // Adjust index if moving within same column
+      if (sourceColumn === targetColumn && sourceIndex < newIndex) {
+        newIndex = Math.max(0, newIndex - 1)
+      }
+      
+      // Only move if position actually changed
+      if (sourceColumn !== targetColumn || sourceIndex !== newIndex) {
+        onCardMove(cardId, targetColumn, newIndex)
+      }
+      
+    } catch (error) {
+      console.error('Error parsing drag data:', error)
     }
-    handleDragEnd()
+    
+    handleDragEnd(event)
+  }
+
+  const handleCardDrop = (targetColumn: string, targetIndex: number, event: React.DragEvent) => {
+    handleDrop(targetColumn, event, targetIndex)
   }
 
   return {
@@ -92,6 +116,6 @@ export function useDragAndDrop(onCardMove: (cardId: string, newColumn: string, n
     handleDragEnd,
     handleDragOver,
     handleDrop,
-    dragRef
+    handleCardDrop
   }
 }

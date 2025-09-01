@@ -7,14 +7,15 @@ import { format } from 'date-fns'
 
 interface KanbanCardProps {
   card: CardType
+  index: number
   onEdit: (card: CardType) => void
-  onDragStart: (card: CardType, event: React.DragEvent) => void
-  onDragEnd: () => void
+  onDragStart: (card: CardType, event: React.DragEvent, index: number) => void
+  onDragEnd: (event: React.DragEvent) => void
   isDragging: boolean
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
 }
 
-export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging, onUpdateCard }: KanbanCardProps) {
+export function KanbanCard({ card, index, onEdit, onDragStart, onDragEnd, isDragging, onUpdateCard }: KanbanCardProps) {
   const completedItems = card.checklist.filter(item => item.completed).length
   const totalItems = card.checklist.length
 
@@ -28,7 +29,7 @@ export function KanbanCard({ card, onEdit, onDragStart, onDragEnd, isDragging, o
   return (
     <Card
       draggable
-      onDragStart={(e) => onDragStart(card, e)}
+      onDragStart={(e) => onDragStart(card, e, index)}
       onDragEnd={onDragEnd}
       data-card-id={card.id}
       className={`cursor-move transition-all duration-200 hover:shadow-md ${
