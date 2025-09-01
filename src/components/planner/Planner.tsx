@@ -213,7 +213,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                 <div className="text-muted-foreground text-xs">Agendados</div>
               </div>
               <div className="text-center p-2 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="font-semibold text-lg text-gray-950">{stats.today}</div>
+                <div className="font-semibold text-lg text-slate-950">{stats.today}</div>
                 <div className="text-muted-foreground text-xs">Hoje</div>
               </div>
               <div className="text-center p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
