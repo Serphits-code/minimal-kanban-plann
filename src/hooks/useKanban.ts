@@ -47,6 +47,9 @@ export function useCards(boardId: string) {
   
   const boardCards = cards.filter(card => card.boardId === boardId)
 
+  // Function to get all cards across all boards (for planner)
+  const getAllCards = () => cards
+
   const createCard = (columnId: 'todo' | 'progress' | 'done', title: string) => {
     const newCard: Card = {
       id: crypto.randomUUID(),
@@ -85,6 +88,7 @@ export function useCards(boardId: string) {
 
   return {
     cards: boardCards,
+    getAllCards,
     createCard,
     updateCard,
     deleteCard,

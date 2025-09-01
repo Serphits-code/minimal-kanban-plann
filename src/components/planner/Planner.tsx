@@ -25,6 +25,19 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCalendar, setShowCalendar] = useState(false)
 
+  // Show empty state if no cards exist
+  if (cards.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <CalendarIcon size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+          <h3 className="text-lg font-medium mb-2">Nenhum card encontrado</h3>
+          <p className="text-muted-foreground">Crie alguns cards nos quadros para usar o planejador</p>
+        </div>
+      </div>
+    )
+  }
+
   // Filter cards based on search
   const filteredCards = useMemo(() => {
     if (!searchQuery) return cards
@@ -154,7 +167,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                 }
               }}
             >
-              <ScrollArea className="h-64">
+              <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
                   {unscheduledCards.map(card => (
                     <PlannerCard
@@ -216,7 +229,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">
-                {formatDateLabel(selectedDate)} - {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                {formatDateLabel(selectedDate)} - {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </CardTitle>
               <Badge variant="outline" className="text-xs">
                 {scheduledCards.length} cards agendados
@@ -224,7 +237,7 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-80">
+            <ScrollArea className="h-[600px]">
               <div className="space-y-1">
                 {workingHours.map(time => {
                   const cardsAtTime = getCardsForTime(time)
@@ -288,11 +301,11 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
       <Card className="h-full">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold">
-            Semana de {format(weekDays[0], "dd/MM", { locale: ptBR })} - {format(weekDays[6], "dd/MM", { locale: ptBR })}
+            Semana de {format(weekDays[0], "dd/MM/yy", { locale: ptBR })} - {format(weekDays[6], "dd/MM/yy", { locale: ptBR })}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2 h-80">
+          <div className="grid grid-cols-7 gap-2 h-[600px]">
             {weekDays.map(day => {
               const dayCards = getCardsForDate(day)
               const isSelected = isSameDay(day, selectedDate)
@@ -307,16 +320,16 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                 >
                   <div className="text-center mb-2">
                     <div className="text-xs text-muted-foreground">
-                      {format(day, 'EEE', { locale: ptBR })}
+                      {format(day, 'EEE', { locale: ptBR }).slice(0, 3)}
                     </div>
                     <div className={`text-sm font-medium ${isToday(day) ? 'text-accent-foreground' : ''}`}>
                       {format(day, 'dd')}
                     </div>
                   </div>
                   
-                  <ScrollArea className="h-48">
+                  <ScrollArea className="h-[500px]">
                     <div className="space-y-1">
-                      {dayCards.slice(0, 4).map(card => (
+                      {dayCards.slice(0, 8).map(card => (
                         <div
                           key={card.id}
                           className="p-1 bg-background border rounded text-xs cursor-pointer hover:shadow-sm"
@@ -335,9 +348,9 @@ export function Planner({ cards, onScheduleCard, onEditCard }: PlannerProps) {
                         </div>
                       ))}
                       
-                      {dayCards.length > 4 && (
+                      {dayCards.length > 8 && (
                         <div className="text-xs text-muted-foreground text-center py-1">
-                          +{dayCards.length - 4} mais
+                          +{dayCards.length - 8} mais
                         </div>
                       )}
                       
@@ -491,9 +504,14 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
       } ${isOverdue ? 'border-destructive/50 bg-destructive/5' : ''} ${
         isDueToday ? 'border-amber-500/50 bg-amber-50' : ''
       }`}
-      onClick={() => onEdit(card)}
     >
-      <div className="space-y-2">
+      <div 
+        className="space-y-2 cursor-pointer" 
+        onClick={(e) => {
+          e.stopPropagation()
+          onEdit(card)
+        }}
+      >
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-medium text-sm leading-tight flex-1 group-hover:text-primary transition-colors">
             {card.title}

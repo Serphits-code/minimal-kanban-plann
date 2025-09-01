@@ -15,8 +15,11 @@ type ViewMode = 'kanban' | 'planner'
 
 function App() {
   const { boards, activeBoard, setActiveBoard, createBoard } = useBoards()
-  const { cards, updateCard, deleteCard, scheduleCard } = useCards(activeBoard)
+  const { cards, updateCard, deleteCard, scheduleCard, getAllCards } = useCards(activeBoard)
   const { tags, createTag } = useTags()
+  
+  // Get all cards for planner (across all boards)
+  const allCards = getAllCards()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [isCardEditorOpen, setIsCardEditorOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
@@ -31,8 +34,10 @@ function App() {
     setIsCardEditorOpen(true)
   }
 
-  // Always get the fresh card data from the store
-  const currentSelectedCard = selectedCard ? cards.find(c => c.id === selectedCard.id) || selectedCard : null
+  // Always get the fresh card data from the store when the dialog is open
+  const currentSelectedCard = selectedCard && isCardEditorOpen ? 
+    allCards.find(c => c.id === selectedCard.id) || selectedCard : 
+    selectedCard
 
   const handleSaveCard = (card: CardType) => {
     updateCard(card.id, {
@@ -44,8 +49,11 @@ function App() {
       scheduledDate: card.scheduledDate,
       scheduledTime: card.scheduledTime
     })
-    setSelectedCard(null)
+    
+    // Close the dialog and clear selected card
     setIsCardEditorOpen(false)
+    setSelectedCard(null)
+    
     toast.success('Card atualizado!')
   }
 
@@ -55,8 +63,9 @@ function App() {
   }
 
   const handleScheduleCard = (cardId: string, date: string, time: string) => {
-    scheduleCard(cardId, date, time)
-    toast.success('Card agendado!')
+    // Use the global updateCard function that works with any card
+    updateCard(cardId, { scheduledDate: date, scheduledTime: time })
+    toast.success(date && time ? 'Card agendado!' : 'Card desagendado!')
   }
 
   const activeBoardData = boards.find(board => board.id === activeBoard)
@@ -113,7 +122,7 @@ function App() {
           />
         ) : (
           <Planner
-            cards={cards}
+            cards={allCards}
             onScheduleCard={handleScheduleCard}
             onEditCard={handleEditCard}
           />

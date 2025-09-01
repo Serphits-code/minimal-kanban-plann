@@ -48,15 +48,17 @@ export function CardEditor({
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
 
   useEffect(() => {
-    if (card) {
+    if (card && isOpen) {
+      // Always refresh with latest data when dialog opens
       setTitle(card.title)
       setDescription(card.description || '')
       setSelectedTags(card.tags || [])
-      setChecklist(card.checklist || [])
+      setChecklist([...card.checklist] || []) // Create new array to force re-render
       setDueDate(card.dueDate ? new Date(card.dueDate) : undefined)
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
-    } else {
+    } else if (!isOpen) {
+      // Clear state when dialog closes
       setTitle('')
       setDescription('')
       setSelectedTags([])
@@ -65,7 +67,7 @@ export function CardEditor({
       setScheduledDate(undefined)
       setScheduledTime('')
     }
-  }, [card, isOpen]) // Added isOpen as dependency to refresh when dialog opens
+  }, [card, isOpen])
 
   const handleSave = () => {
     if (!card || !title.trim()) return
