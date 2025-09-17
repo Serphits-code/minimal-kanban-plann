@@ -522,9 +522,9 @@ export function CardEditor({
                     />
                   </div>
 
-                  <div className="flex gap-2 items-center">
-                    <label className="text-sm text-muted-foreground whitespace-nowrap">Duração:</label>
-                    <div className="flex gap-1">
+                  <div className="space-y-2">
+                    <label className="text-sm text-muted-foreground block">Duração:</label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {[1, 2, 3, 4, 6, 8].map(hours => (
                         <Button
                           key={hours}
@@ -532,7 +532,7 @@ export function CardEditor({
                           variant={duration === hours ? "default" : "outline"}
                           size="sm"
                           onClick={() => setDuration(hours)}
-                          className="px-2 py-1 text-xs"
+                          className="px-2 py-1 text-xs w-full"
                           disabled={!scheduledDate}
                         >
                           {hours}h
