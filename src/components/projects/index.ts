@@ -1,0 +1,8 @@
+export { ProjectsTable } from './ProjectsTable'
+export { ProjectTaskRow } from './ProjectTaskRow'
+export { TaskSidebar } from './TaskSidebar'
+export { AssigneePopover } from './AssigneePopover'
+export { StatusPopover } from './StatusPopover'
+export { PriorityPopover } from './PriorityPopover'
+export { DueDatePopover } from './DueDatePopover'
+export { FilePopover } from './FilePopover'

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Column } from '@/types/kanban'
-import { Plus, Pencil, Trash2, GripVertical } from '@phosphor-icons/react'
+import { Plus, Pencil, Trash, DotsNine } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 interface ColumnEditorProps {
@@ -107,7 +107,7 @@ export function ColumnEditor({
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
               >
-                <GripVertical size={16} className="text-muted-foreground cursor-grab" />
+                <DotsNine size={16} className="text-muted-foreground cursor-grab" />
                 
                 {editingColumn === column.id ? (
                   <div className="flex-1 flex gap-2">
@@ -149,7 +149,7 @@ export function ColumnEditor({
                       onClick={() => handleDeleteColumn(column.id)}
                       disabled={columns.length <= 1}
                     >
-                      <Trash2 size={14} />
+                      <Trash size={14} />
                     </Button>
                   </>
                 )}

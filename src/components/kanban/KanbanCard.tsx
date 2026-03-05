@@ -1,9 +1,10 @@
 import React from 'react'
-import { Card as CardType, ChecklistItem } from '@/types/kanban'
+import { Card as CardType, ChecklistItem, PRIORITY_CONFIG, STATUS_CONFIG, Employee } from '@/types/kanban'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Calendar, Clock, Paperclip, Image } from '@phosphor-icons/react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Calendar, Clock, Paperclip, Image, User, Flag, Circle } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface KanbanCardProps {
@@ -15,6 +16,7 @@ interface KanbanCardProps {
   isDragging: boolean
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onToggleCardCompletion: (cardId: string, completed: boolean) => void
+  employees?: Employee[]
 }
 
 export function KanbanCard({ 
@@ -25,12 +27,22 @@ export function KanbanCard({
   onDragEnd, 
   isDragging, 
   onUpdateCard, 
-  onToggleCardCompletion 
+  onToggleCardCompletion,
+  employees = []
 }: KanbanCardProps) {
   const completedItems = card.checklist.filter(item => item.completed).length
   const totalItems = card.checklist.length
   const imageAttachments = card.attachments?.filter(att => att.type.startsWith('image/')) || []
   const otherAttachments = card.attachments?.filter(att => !att.type.startsWith('image/')) || []
+
+  // Resolve assignee from card.assignee or employees list
+  const assignee = card.assignee || (card.assigneeId ? employees.find(e => e.id === card.assigneeId) : null)
+  const priorityConfig = card.priority ? PRIORITY_CONFIG[card.priority] : null
+  const statusConfig = card.status ? STATUS_CONFIG[card.status] : null
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   const handleChecklistChange = (itemId: string, completed: boolean) => {
     const updatedChecklist = card.checklist.map(item =>
@@ -78,6 +90,10 @@ export function KanbanCard({
       }`}
       onClick={handleClick}
     >
+      {/* Priority stripe */}
+      {priorityConfig && card.priority !== 'medium' && (
+        <div className="h-1 rounded-t-lg" style={{ backgroundColor: priorityConfig.color }} />
+      )}
       <div>
         <CardHeader className="pb-3">
           <div className="space-y-2">
@@ -149,6 +165,46 @@ export function KanbanCard({
 
 
 
+          {/* Priority & Status badges */}
+          {(priorityConfig || (statusConfig && card.status !== 'not_started')) && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {priorityConfig && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 gap-1"
+                        style={{ backgroundColor: priorityConfig.color + '18', color: priorityConfig.color }}
+                      >
+                        <Flag size={10} weight="fill" />
+                        {priorityConfig.label}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Prioridade: {priorityConfig.label}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {statusConfig && card.status !== 'not_started' && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 gap-1"
+                        style={{ backgroundColor: statusConfig.color + '18', color: statusConfig.color }}
+                      >
+                        <Circle size={8} weight="fill" />
+                        {statusConfig.label}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>Status: {statusConfig.label}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               {card.dueDate && (
@@ -165,20 +221,40 @@ export function KanbanCard({
                 </div>
               )}
             </div>
-            
-            {otherAttachments.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Paperclip size={12} />
-                <span>{otherAttachments.length}</span>
-              </div>
-            )}
-            
-            {imageAttachments.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Image size={12} />
-                <span>{imageAttachments.length}</span>
-              </div>
-            )}
+
+            <div className="flex items-center gap-2">
+              {otherAttachments.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Paperclip size={12} />
+                  <span>{otherAttachments.length}</span>
+                </div>
+              )}
+              
+              {imageAttachments.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Image size={12} />
+                  <span>{imageAttachments.length}</span>
+                </div>
+              )}
+
+              {/* Assignee avatar */}
+              {assignee && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-medium text-primary border border-primary/20 ml-1">
+                        {assignee.avatar ? (
+                          <img src={assignee.avatar} alt={assignee.name} className="w-6 h-6 rounded-full object-cover" />
+                        ) : (
+                          getInitials(assignee.name)
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>{assignee.name}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </CardContent>
       </div>

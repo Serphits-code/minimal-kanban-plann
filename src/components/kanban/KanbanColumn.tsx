@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card as CardType } from '@/types/kanban'
+import { Card as CardType, Employee } from '@/types/kanban'
 import { KanbanCard } from './KanbanCard'
 import { Plus } from '@phosphor-icons/react'
 import React, { useState } from 'react'
@@ -9,7 +9,8 @@ interface KanbanColumnProps {
   title: string
   columnId: string
   cards: CardType[]
-  onCreateCard: (columnId: string, title: string) => void
+  employees?: Employee[]
+  onCreateCard: (title: string, columnId: string) => void
   onEditCard: (card: CardType) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onToggleCardCompletion: (cardId: string, completed: boolean) => void
@@ -24,6 +25,7 @@ export function KanbanColumn({
   title,
   columnId,
   cards,
+  employees = [],
   onCreateCard,
   onEditCard,
   onUpdateCard,
@@ -40,7 +42,7 @@ export function KanbanColumn({
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
-      onCreateCard(columnId, newCardTitle.trim())
+      onCreateCard(newCardTitle.trim(), columnId)
       setNewCardTitle('')
       setIsAddingCard(false)
     }
@@ -130,6 +132,7 @@ export function KanbanColumn({
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 isDragging={draggedCardId === card.id}
+                employees={employees}
               />
             </div>
           </div>

@@ -31,23 +31,23 @@
 }
 
 .dark {
-  --background: oklch(0.08 0.01 230);
+  --background: #1f1f1f !important;
   --foreground: oklch(0.95 0.01 230);
-  --card: oklch(0.12 0.02 230);
+  --card: #252525 !important;
   --card-foreground: oklch(0.95 0.01 230);
-  --popover: oklch(0.12 0.02 230);
+  --popover: #252525 !important;
   --popover-foreground: oklch(0.95 0.01 230);
   --primary: oklch(0.6 0.15 230);
-  --primary-foreground: oklch(0.08 0.01 230);
-  --secondary: oklch(0.16 0.02 230);
+  --primary-foreground: #1f1f1f !important;
+  --secondary: #2a2a2a !important;
   --secondary-foreground: oklch(0.95 0.01 230);
-  --muted: oklch(0.16 0.02 230);
+  --muted: #2a2a2a !important;
   --muted-foreground: oklch(0.6 0.05 230);
   --accent: oklch(0.7 0.15 140);
-  --accent-foreground: oklch(0.08 0.01 230);
+  --accent-foreground: #1f1f1f !important;
   --destructive: oklch(0.7 0.24 27);
   --destructive-foreground: oklch(0.95 0.01 230);
-  --border: oklch(0.2 0.02 230);
+  --border: #404040 !important;
   --input: oklch(0.2 0.02 230);
   --ring: oklch(0.6 0.15 230);
 }
@@ -84,4 +84,9 @@
 body {
   font-family: 'Inter', sans-serif;
   @apply bg-background text-foreground;
+}
+
+/* Force dark background */
+html.dark body {
+  background-color: #1f1f1f !important;
 }

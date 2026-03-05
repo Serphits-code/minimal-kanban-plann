@@ -5,14 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
-import { Card as CardType } from '@/types/kanban'
-import { format, startOfDay, isSameDay, addDays, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
+import { Card as CardType, Employee } from '@/types/kanban'
+import { format, startOfDay, isSameDay, addDays, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Clock, Calendar as CalendarIcon, CaretLeft, CaretRight, MagnifyingGlass, Funnel, Paperclip } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 
 interface PlannerProps {
   cards: CardType[]
+  employees: Employee[]
   onScheduleCard: (cardId: string, date: string, time: string) => void
   onEditCard: (card: CardType) => void
   onUpdateCardDuration?: (cardId: string, duration: number) => void
@@ -20,36 +22,36 @@ interface PlannerProps {
 
 type ViewMode = 'day' | 'week' | 'month'
 
-export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuration }: PlannerProps) {
+export function Planner({ cards, employees, onScheduleCard, onEditCard, onUpdateCardDuration }: PlannerProps) {
+  const { user: authUser } = useAuth()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [draggedCard, setDraggedCard] = useState<CardType | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('day')
   const [searchQuery, setSearchQuery] = useState('')
   const [showCalendar, setShowCalendar] = useState(false)
 
-  // Show empty state if no cards exist
-  if (cards.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <CalendarIcon size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
-          <h3 className="text-lg font-medium mb-2">Nenhum card encontrado</h3>
-          <p className="text-muted-foreground">Crie alguns cards nos quadros para usar o planejador</p>
-        </div>
-      </div>
-    )
-  }
+  // Find the employee record that matches the logged-in user
+  const currentEmployee = useMemo(() => {
+    if (!authUser) return null
+    return employees.find(e => e.userId === authUser.id) || null
+  }, [employees, authUser])
 
-  // Filter cards based on search
+  // Filter cards: only show cards assigned to the current user
+  const myCards = useMemo(() => {
+    if (!currentEmployee) return []
+    return cards.filter(card => card.assigneeId === currentEmployee.id)
+  }, [cards, currentEmployee])
+
+  // Filter cards based on search (from myCards, not all cards)
   const filteredCards = useMemo(() => {
-    if (!searchQuery) return cards
-    return cards.filter(card => 
+    if (!searchQuery) return myCards
+    return myCards.filter(card => 
       card.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       card.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       card.tags.some(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       card.attachments?.some(attachment => attachment.name.toLowerCase().includes(searchQuery.toLowerCase()))
     )
-  }, [cards, searchQuery])
+  }, [myCards, searchQuery])
 
   const scheduledCards = filteredCards.filter(card => 
     card.scheduledDate && card.scheduledTime &&
@@ -61,9 +63,25 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
     return 0
   })
 
-  const unscheduledCards = filteredCards.filter(card => 
-    !card.scheduledDate || !card.scheduledTime
-  )
+  const unscheduledCards = filteredCards.filter(card => {
+    // Cards with a specific scheduled time are scheduled
+    if (card.scheduledDate && card.scheduledTime) return false
+    return true
+  })
+
+  // Detect multi-day cards that need daily scheduling
+  const multiDayCards = useMemo(() => {
+    return filteredCards.filter(card => {
+      if (card.scheduledDate && card.dueDate) {
+        const start = new Date(card.scheduledDate)
+        const end = new Date(card.dueDate)
+        const days = differenceInDays(end, start)
+        return days > 0
+      }
+      if (card.duration && card.duration > 8) return true
+      return false
+    })
+  }, [filteredCards])
 
   // Week view data
   const weekDays = useMemo(() => {
@@ -81,6 +99,19 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
       }
       return 0
     })
+  }
+
+  // Show empty state if no cards exist
+  if (cards.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <CalendarIcon size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+          <h3 className="text-lg font-medium mb-2">Nenhum card encontrado</h3>
+          <p className="text-muted-foreground">Crie alguns cards nos quadros para usar o planejador</p>
+        </div>
+      </div>
+    )
   }
 
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
@@ -139,7 +170,12 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
         return
       }
       
-      onScheduleCard(cardId, selectedDate.toISOString(), time)
+      // Format date as YYYY-MM-DD in local timezone to avoid UTC conversion issues
+      const localDate = selectedDate.getFullYear() + '-' + 
+        String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(selectedDate.getDate()).padStart(2, '0')
+      
+      onScheduleCard(cardId, localDate, time)
     }
     
     setDraggedCard(null)
@@ -160,12 +196,8 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
     const timeHour = parseInt(time.split(':')[0])
     const draggedDuration = draggedCard.duration || 1
     
-    // Highlight this time slot if it would be occupied by the dragged card
-    const [dropHour] = event?.target?.closest('[data-time]')?.getAttribute('data-time')?.split(':') || []
-    if (!dropHour) return false
-    
-    const dropHourNum = parseInt(dropHour)
-    return timeHour >= dropHourNum && timeHour < dropHourNum + draggedDuration
+    // For now, we'll just return false until we implement proper drop zone highlighting
+    return false
   }
 
   const getCardsForTime = (time: string) => {
@@ -201,7 +233,7 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
   const renderDayView = () => (
     <div className="h-full flex gap-4">
       {/* Left sidebar - Unscheduled cards */}
-      <div className="w-80 flex flex-col gap-4 max-h-full">
+      <div className="w-80 flex flex-col gap-4 h-full overflow-y-auto">
         <Card className="flex-1 flex flex-col min-h-0">
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -211,9 +243,9 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 min-h-0">
+          <CardContent className="pb-3">
             <div 
-              className={`h-full border-2 border-dashed transition-all rounded-lg p-3 ${
+              className={`border-2 border-dashed transition-all rounded-lg p-3 ${
                 draggedCard ? 'border-primary bg-primary/5' : 'border-muted hover:border-border'
               }`}
               onDragOver={handleDragOver}
@@ -225,21 +257,29 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
                 }
               }}
             >
-              <ScrollArea className="h-full">
+              <div className="max-h-72 overflow-y-auto">
                 <div className="space-y-2">
-                  {unscheduledCards.map(card => (
-                    <PlannerCard
-                      key={card.id}
-                      card={card}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      onEdit={onEditCard}
-                      isDragging={draggedCard?.id === card.id}
-                      showTime={false}
-                      duration={card.duration || 1}
-                      onUpdateDuration={onUpdateCardDuration}
-                    />
-                  ))}
+                  {unscheduledCards.map(card => {
+                    const cardIsMultiDay = multiDayCards.some(mc => mc.id === card.id)
+                    const cardDays = card.dueDate
+                      ? Math.max(differenceInDays(new Date(card.dueDate), startOfDay(selectedDate)), 0)
+                      : card.duration ? Math.ceil(card.duration / 8) : 0
+                    return (
+                      <PlannerCard
+                        key={card.id}
+                        card={card}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onEdit={onEditCard}
+                        isDragging={draggedCard?.id === card.id}
+                        showTime={false}
+                        duration={card.duration || 1}
+                        isMultiDay={cardIsMultiDay}
+                        multiDayDays={cardDays}
+                        onUpdateDuration={onUpdateCardDuration}
+                      />
+                    )
+                  })}
                   
                   {unscheduledCards.length === 0 && (
                     <div className="text-center text-muted-foreground py-8 text-sm">
@@ -250,42 +290,28 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
                     </div>
                   )}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Quick stats */}
-        <Card className="flex-shrink-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Estatísticas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="text-center p-2 bg-muted rounded-lg">
-                <div className="font-semibold text-lg">{stats.total}</div>
-                <div className="text-muted-foreground text-xs">Total</div>
-              </div>
-              <div className="text-center p-2 bg-accent/10 border border-accent/20 rounded-lg">
-                <div className="font-semibold text-lg text-foreground">{stats.scheduled}</div>
-                <div className="text-muted-foreground text-xs">Agendados</div>
-              </div>
-              <div className="text-center p-2 bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="font-semibold text-lg text-foreground">{stats.today}</div>
-                <div className="text-muted-foreground text-xs">Hoje</div>
-              </div>
-              <div className="text-center p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <div className="font-semibold text-lg text-foreground">{stats.unscheduled}</div>
-                <div className="text-muted-foreground text-xs">Livres</div>
-              </div>
-            </div>
-            
-            <div className="text-center p-2 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-              <div className="font-semibold text-lg text-foreground">{stats.withAttachments}</div>
-              <div className="text-muted-foreground text-xs">Com Anexos</div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex-shrink-0 px-1">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-foreground">{stats.total}</span> total
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-foreground">{stats.scheduled}</span> agendados
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-foreground">{stats.today}</span> hoje
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-foreground">{stats.unscheduled}</span> livres
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Main timeline */}
@@ -582,9 +608,48 @@ export function Planner({ cards, onScheduleCard, onEditCard, onUpdateCardDuratio
         )}
       </div>
 
+      {/* Period cards banner */}
+      {multiDayCards.length > 0 && (
+        <div className="px-6 pt-3 pb-2">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 text-xs font-semibold mb-2">
+              <CalendarIcon size={12} />
+              Agendados por período ({multiDayCards.length})
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+              {multiDayCards.map(card => {
+                const days = card.dueDate
+                  ? Math.max(differenceInDays(new Date(card.dueDate), startOfDay(selectedDate)), 0)
+                  : card.duration ? Math.ceil(card.duration / 8) : 0
+                const start = card.scheduledDate ? format(new Date(card.scheduledDate), 'dd/MM') : null
+                const end = card.dueDate ? format(new Date(card.dueDate), 'dd/MM') : null
+                return (
+                  <div
+                    key={card.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(card, e)}
+                    onDragEnd={handleDragEnd}
+                    className="flex-shrink-0 w-28 bg-background border border-amber-500/30 rounded-lg p-2 cursor-pointer hover:border-amber-500/60 hover:shadow-md transition-all"
+                    onClick={() => onEditCard(card)}
+                  >
+                    <p className="text-xs font-semibold truncate mb-1">{card.title}</p>
+                    {start && end && (
+                      <p className="text-[10px] text-muted-foreground truncate">{start} → {end}</p>
+                    )}
+                    <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 h-4 text-amber-600 border-amber-400">
+                      {days}d restantes
+                    </Badge>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="p-6 h-full overflow-auto">
+        <div className="pt-3 px-6 pb-6 h-full overflow-auto">
           {viewMode === 'day' ? renderDayView() : renderWeekView()}
         </div>
       </div>
@@ -601,10 +666,12 @@ interface PlannerCardProps {
   isDragging: boolean
   showTime: boolean
   duration?: number
+  isMultiDay?: boolean
+  multiDayDays?: number
   onUpdateDuration?: (cardId: string, duration: number) => void
 }
 
-function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTime, duration = 1, onUpdateDuration }: PlannerCardProps) {
+function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTime, duration = 1, isMultiDay = false, multiDayDays = 0, onUpdateDuration }: PlannerCardProps) {
   const [isResizing, setIsResizing] = useState(false)
   const completedTasks = card.checklist.filter(item => item.completed).length
   const totalTasks = card.checklist.length
@@ -648,14 +715,14 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
       draggable
       onDragStart={(e) => onDragStart(card, e)}
       onDragEnd={onDragEnd}
-      className={`p-3 border rounded-lg cursor-move hover:shadow-lg transition-all bg-background group hover:border-primary/50 h-full flex flex-col ${
+      className={`p-2.5 border rounded-lg cursor-move hover:shadow-md transition-all bg-background group hover:border-primary/50 flex flex-col ${
         isDragging ? 'opacity-50 scale-95' : ''
       } ${isOverdue ? 'border-destructive/50 bg-destructive/5' : ''} ${
-        isDueToday ? 'border-amber-500/50 bg-amber-50' : ''
+        isDueToday ? 'border-amber-500/50' : ''
       } ${duration > 1 ? 'min-h-16' : ''}`}
     >
       <div 
-        className="space-y-2 cursor-pointer" 
+        className="space-y-1.5 cursor-pointer" 
         onClick={(e) => {
           e.stopPropagation()
           onEdit(card)
@@ -665,7 +732,7 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
           <h4 className="font-medium text-sm leading-tight flex-1 group-hover:text-primary transition-colors">
             {card.title}
           </h4>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {showTime && card.scheduledTime && (
               <Badge variant="outline" className="text-xs">
                 <Clock size={10} className="mr-1" />
@@ -673,76 +740,58 @@ function PlannerCard({ card, onDragStart, onDragEnd, onEdit, isDragging, showTim
               </Badge>
             )}
             {isOverdue && (
-              <Badge variant="destructive" className="text-xs">
-                Vencido
-              </Badge>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">Vencido</Badge>
             )}
             {isDueToday && !isOverdue && (
-              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                Hoje
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-amber-100 text-amber-800">Hoje</Badge>
+            )}
+            {isMultiDay && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 border border-amber-400">
+                {multiDayDays}d
               </Badge>
             )}
           </div>
         </div>
-        
-        {card.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {card.description}
-          </p>
-        )}
 
         {/* Progress bar for checklist */}
         {totalTasks > 0 && (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                {completedTasks}/{totalTasks} tarefas
-              </span>
-              <span className="text-muted-foreground">
-                {Math.round(progressPercentage)}%
-              </span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-1.5">
-              <div 
-                className="bg-accent h-1.5 rounded-full transition-all"
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
+          <div className="w-full bg-muted rounded-full h-1">
+            <div 
+              className="bg-accent h-1 rounded-full transition-all"
+              style={{ width: `${progressPercentage}%` }}
+            />
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1">
             {card.tags.slice(0, 2).map(tag => (
               <Badge
                 key={tag.id}
                 variant="secondary"
-                className="text-xs px-1.5 py-0"
+                className="text-[10px] px-1.5 py-0 h-4"
                 style={{ backgroundColor: tag.color + '20', color: tag.color }}
               >
                 {tag.name}
               </Badge>
             ))}
             {card.tags.length > 2 && (
-              <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                +{card.tags.length - 2}
-              </Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">+{card.tags.length - 2}</Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-shrink-0">
             {card.dueDate && !isDueToday && !isOverdue && (
-              <div className="flex items-center gap-1">
-                <CalendarIcon size={10} />
+              <span className="flex items-center gap-0.5">
+                <CalendarIcon size={9} />
                 {format(new Date(card.dueDate), 'dd/MM')}
-              </div>
+              </span>
             )}
-            
             {card.attachments && card.attachments.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Paperclip size={10} />
-                <span>{card.attachments.length}</span>
-              </div>
+              <span className="flex items-center gap-0.5">
+                <Paperclip size={9} />
+                {card.attachments.length}
+              </span>
             )}
           </div>
         </div>

@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { KanbanColumn } from './KanbanColumn'
 import { ColumnEditor } from './ColumnEditor'
-import { Card as CardType, Column } from '@/types/kanban'
+import { Card as CardType, Column, Employee } from '@/types/kanban'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Settings, Clock } from '@phosphor-icons/react'
+import { Gear, Clock } from '@phosphor-icons/react'
 
 interface KanbanBoardProps {
   boardId: string
   cards: CardType[]
   columns: Column[]
-  onCreateCard: (columnId: string, title: string) => void
+  employees?: Employee[]
+  onCreateCard: (title: string, columnId: string) => void
   onMoveCard: (cardId: string, newColumn: string, newOrder?: number) => void
   onUpdateCard: (cardId: string, updates: Partial<CardType>) => void
   onEditCard: (card: CardType) => void
@@ -28,6 +29,7 @@ export function KanbanBoard({
   boardId, 
   cards, 
   columns,
+  employees = [],
   onCreateCard, 
   onMoveCard, 
   onUpdateCard, 
@@ -66,7 +68,7 @@ export function KanbanBoard({
           onClick={() => setShowColumnEditor(true)}
           className="gap-2"
         >
-          <Settings size={16} />
+          <Gear size={16} />
           Gerenciar Colunas
         </Button>
       </div>
@@ -86,6 +88,7 @@ export function KanbanBoard({
                 title={column.name}
                 columnId={column.id}
                 cards={columnCards}
+                employees={employees}
                 onCreateCard={onCreateCard}
                 onEditCard={onEditCard}
                 onUpdateCard={onUpdateCard}

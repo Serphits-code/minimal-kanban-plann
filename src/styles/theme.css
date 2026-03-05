@@ -131,6 +131,7 @@
    * https://tailwindcss.com/docs/customizing-spacing#default-spacing-scale
    */
     --size-scale: 1;
+    --spacing: 1rem;
     --size-0: 0px;
     --size-px: 1px;
     --size-0-5: calc(0.125rem * var(--size-scale));
@@ -254,9 +255,32 @@
     --font-family: var(--font-sans-serif);
   }
 
-  #spark-app.dark-theme {
-    --color-bg: var(--color-neutral-1);
-    --color-bg-inset: #000000;
-    --color-bg-overlay: var(--color-neutral-3);
+  #spark-app.dark-theme,
+  .dark #spark-app,
+  .dark {
+    --color-bg: #1f1f1f;
+    --color-bg-inset: #1f1f1f;
+    --color-bg-overlay: #2a2a2a;
+    
+    /* Override neutral colors for consistent dark theme */
+    --color-neutral-1: #1f1f1f;
+    --color-neutral-2: #252525;
+    --color-neutral-3: #2a2a2a;
+    --color-neutral-4: #2f2f2f;
   }
+}
+
+/* Force dark theme colors with higher specificity */
+html.dark {
+  --background: #1f1f1f !important;
+  --card: #252525 !important;
+  --popover: #252525 !important;
+  --secondary: #2a2a2a !important;
+  --muted: #2a2a2a !important;
+  --border: #404040 !important;
+  --input: #404040 !important;
+}
+
+html.dark body {
+  background-color: #1f1f1f !important;
 }

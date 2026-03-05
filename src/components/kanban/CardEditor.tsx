@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Card as CardType, Tag, ChecklistItem, Attachment } from '@/types/kanban'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card as CardType, Tag, ChecklistItem, Attachment, Employee, Priority, TaskStatus, PRIORITY_CONFIG, STATUS_CONFIG, Column, getColumnStatusColor } from '@/types/kanban'
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, X, Calendar as CalendarIcon, Clock, Tag as TagIcon, Paperclip, Download, FileText, Image, Video, Music, Eye } from '@phosphor-icons/react'
+import { Plus, X, Calendar as CalendarIcon, Clock, TagSimple as TagIcon, Paperclip, DownloadSimple as Download, FileText, Image, VideoCamera as Video, MusicNote as Music, Eye, User, Flag, Circle } from '@phosphor-icons/react'
 import { format } from 'date-fns'
 
 interface CardEditorProps {
@@ -19,6 +20,8 @@ interface CardEditorProps {
   onDelete: (cardId: string) => void
   availableTags: Tag[]
   onCreateTag: (name: string, color: string) => Tag
+  employees?: Employee[]
+  columns?: Column[]
 }
 
 const TAG_COLORS = [
@@ -33,7 +36,9 @@ export function CardEditor({
   onSave, 
   onDelete, 
   availableTags,
-  onCreateTag 
+  onCreateTag,
+  employees = [],
+  columns = []
 }: CardEditorProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -50,6 +55,10 @@ export function CardEditor({
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [assigneeId, setAssigneeId] = useState<string>('')
+  const [priority, setPriority] = useState<Priority>('medium')
+  const [status, setStatus] = useState<TaskStatus>('not_started')
+  const [cardColumn, setCardColumn] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -58,13 +67,17 @@ export function CardEditor({
       setTitle(card.title)
       setDescription(card.description || '')
       setSelectedTags(card.tags || [])
-      setChecklist([...card.checklist] || []) // Create new array to force re-render
-      setAttachments([...card.attachments] || [])
+      setChecklist(card.checklist ? [...card.checklist] : []) // Create new array to force re-render
+      setAttachments(card.attachments ? [...card.attachments] : [])
       setDueDate(card.dueDate ? new Date(card.dueDate) : undefined)
       setScheduledDate(card.scheduledDate ? new Date(card.scheduledDate) : undefined)
       setScheduledTime(card.scheduledTime || '')
       setDuration(card.duration || 1)
       setCompleted(card.completed || false)
+      setAssigneeId(card.assigneeId || '')
+      setPriority(card.priority || 'medium')
+      setStatus(card.status || 'not_started')
+      setCardColumn(card.column || '')
     } else if (!isOpen) {
       // Clear state when dialog closes
       setTitle('')
@@ -77,6 +90,10 @@ export function CardEditor({
       setScheduledTime('')
       setDuration(1)
       setCompleted(false)
+      setAssigneeId('')
+      setPriority('medium')
+      setStatus('not_started')
+      setCardColumn('')
     }
   }, [card, isOpen])
 
@@ -94,7 +111,11 @@ export function CardEditor({
       scheduledDate: scheduledDate?.toISOString(),
       scheduledTime,
       duration,
-      completed
+      completed,
+      assigneeId: assigneeId || undefined,
+      priority,
+      status,
+      ...(cardColumn ? { column: cardColumn } : {})
     }
 
     onSave(updatedCard)
@@ -215,7 +236,7 @@ export function CardEditor({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col overflow-x-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Editar Card</DialogTitle>
           </DialogHeader>
@@ -249,6 +270,89 @@ export function CardEditor({
               <label htmlFor="card-completed" className="text-sm font-medium cursor-pointer">
                 Tarefa finalizada
               </label>
+            </div>
+
+            {/* Responsável, Prioridade, Status */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  <User size={14} className="inline mr-1" />
+                  Responsável
+                </label>
+                <Select value={assigneeId || '_none'} onValueChange={(val) => setAssigneeId(val === '_none' ? '' : val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Nenhum</SelectItem>
+                    {employees.map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  <Flag size={14} className="inline mr-1" />
+                  Prioridade
+                </label>
+                <Select value={priority} onValueChange={(val: Priority) => setPriority(val)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PRIORITY_CONFIG) as [Priority, { label: string; color: string }][]).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
+                          {config.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  <Circle size={14} className="inline mr-1" />
+                  Status
+                </label>
+                {columns.length > 0 ? (
+                  <Select value={cardColumn} onValueChange={(val) => setCardColumn(val)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...columns].sort((a, b) => a.order - b.order).map((col, index) => (
+                        <SelectItem key={col.id} value={col.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getColumnStatusColor(index) }} />
+                            {col.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={status} onValueChange={(val: TaskStatus) => setStatus(val)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.entries(STATUS_CONFIG) as [TaskStatus, { label: string; color: string }][]).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: config.color }} />
+                            {config.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
 
             <div>
@@ -445,101 +549,65 @@ export function CardEditor({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Data de Vencimento</label>
-                <div className="flex gap-2">
+                <label className="text-sm font-medium mb-2 block">Período do Projeto</label>
+                <div className="flex gap-2 items-center">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="flex-1 justify-start gap-2">
                         <CalendarIcon size={16} />
-                        {dueDate ? format(dueDate, 'dd/MM/yyyy') : 'Selecionar data'}
+                        {scheduledDate && dueDate
+                          ? `${format(scheduledDate, 'dd/MM/yyyy')} → ${format(dueDate, 'dd/MM/yyyy')}`
+                          : scheduledDate
+                          ? `${format(scheduledDate, 'dd/MM/yyyy')} → Selecionar fim`
+                          : 'Selecionar período'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
-                        mode="single"
-                        selected={dueDate}
-                        onSelect={setDueDate}
+                        mode="range"
+                        selected={{
+                          from: scheduledDate,
+                          to: dueDate,
+                        }}
+                        onSelect={(range) => {
+                          setScheduledDate(range?.from)
+                          setDueDate(range?.to)
+                        }}
+                        numberOfMonths={1}
                       />
                     </PopoverContent>
                   </Popover>
-                  {dueDate && (
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => setDueDate(undefined)}
+                  {(scheduledDate || dueDate) && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => { setScheduledDate(undefined); setDueDate(undefined); setScheduledTime('') }}
                       className="flex-shrink-0"
                     >
                       <X size={16} />
                     </Button>
                   )}
                 </div>
+                {scheduledDate && dueDate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {Math.round((dueDate.getTime() - scheduledDate.getTime()) / (1000 * 60 * 60 * 24) + 1)} dia(s) de projeto
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Agendar</label>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex-1 justify-start gap-2">
-                          <CalendarIcon size={16} />
-                          {scheduledDate ? format(scheduledDate, 'dd/MM/yyyy') : 'Data'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={scheduledDate}
-                          onSelect={setScheduledDate}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    {scheduledDate && (
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => {
-                          setScheduledDate(undefined)
-                          setScheduledTime('')
-                        }}
-                        className="flex-shrink-0"
-                      >
-                        <X size={16} />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Clock size={16} className="mt-2 text-muted-foreground flex-shrink-0" />
-                    <Input
-                      type="time"
-                      value={scheduledTime}
-                      onChange={(e) => setScheduledTime(e.target.value)}
-                      className="flex-1"
-                      disabled={!scheduledDate}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground block">Duração:</label>
-                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {[1, 2, 3, 4, 6, 8].map(hours => (
-                        <Button
-                          key={hours}
-                          type="button"
-                          variant={duration === hours ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setDuration(hours)}
-                          className="px-2 py-1 text-xs w-full"
-                          disabled={!scheduledDate}
-                        >
-                          {hours}h
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
+                <label className="text-sm font-medium mb-2 block">Horário de início</label>
+                <div className="flex gap-2 items-center">
+                  <Clock size={16} className="text-muted-foreground flex-shrink-0" />
+                  <Input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="flex-1"
+                    disabled={!scheduledDate}
+                  />
                 </div>
               </div>
             </div>

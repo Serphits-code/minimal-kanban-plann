@@ -2,6 +2,8 @@ import { ComponentProps } from "react"
 import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left"
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right"
 import { DayPicker } from "react-day-picker"
+import { ptBR } from "date-fns/locale"
+import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -10,12 +12,21 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  locale = ptBR,
+  weekStartsOn = 1,
+  formatters,
   ...props
-}: ComponentProps<typeof DayPicker>) {
+}: ComponentProps<typeof DayPicker> & { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      locale={locale}
+      weekStartsOn={weekStartsOn}
       className={cn("p-3", className)}
+      formatters={{
+        formatWeekdayName: (date) => format(date, 'EEEEEE', { locale: ptBR }),
+        ...formatters,
+      }}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",
         month: "flex flex-col gap-4",
@@ -31,8 +42,13 @@ function Calendar({
         table: "w-full border-collapse space-x-1",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] text-center",
+        // DayPicker v9 class names
+        weekdays: "flex",
+        weekday:
+          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] text-center",
         row: "flex w-full mt-2",
+        week: "flex w-full mt-2",
         cell: cn(
           "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",
           props.mode === "range"
@@ -56,6 +72,18 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        // v9 equivalents
+        range_start:
+          "day-range-start aria-selected:bg-primary aria-selected:text-primary-foreground rounded-l-md",
+        range_end:
+          "day-range-end aria-selected:bg-primary aria-selected:text-primary-foreground rounded-r-md",
+        selected:
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+        today: "bg-accent text-accent-foreground",
+        outside: "day-outside text-muted-foreground aria-selected:text-muted-foreground",
+        disabled: "text-muted-foreground opacity-50",
+        range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        hidden: "invisible",
         ...classNames,
       }}
       components={{
