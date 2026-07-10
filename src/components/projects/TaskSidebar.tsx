@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AssigneePopover } from './AssigneePopover'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { format } from 'date-fns'
@@ -90,7 +91,9 @@ export function TaskSidebar({
 
   if (!card) return null
 
-  const assignee = getEmployeeById(card.assigneeId)
+  const assigneeIds = card.assigneeIds?.length ? card.assigneeIds : (card.assigneeId ? [card.assigneeId] : [])
+  const assignees = assigneeIds.map(id => getEmployeeById(id)).filter(Boolean) as Employee[]
+  const assignee = assignees[0]
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
 
   const getInitials = (name: string) => {
@@ -130,7 +133,7 @@ export function TaskSidebar({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[520px] sm:max-w-[520px] p-0 overflow-hidden flex flex-col">
+      <SheetContent className="w-full sm:w-[520px] sm:max-w-[520px] p-0 overflow-hidden flex flex-col">
         <SheetHeader className="p-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             {editingTitle ? (
@@ -161,11 +164,15 @@ export function TaskSidebar({
                 <Pencil size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
               </div>
             )}
-            {assignee && (
-              <Avatar className="h-8 w-8 flex-shrink-0 ml-2">
-                <AvatarImage src={assignee.avatar} />
-                <AvatarFallback className="text-xs">{getInitials(assignee.name)}</AvatarFallback>
-              </Avatar>
+            {assignees.length > 0 && (
+              <div className="flex -space-x-2 flex-shrink-0 ml-2">
+                {assignees.slice(0, 3).map(emp => (
+                  <Avatar key={emp.id} className="h-8 w-8 border-2 border-background">
+                    <AvatarImage src={emp.avatar} />
+                    <AvatarFallback className="text-xs">{getInitials(emp.name)}</AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
             )}
           </div>
         </SheetHeader>
@@ -276,35 +283,29 @@ export function TaskSidebar({
             {/* Assignee */}
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground w-28 flex-shrink-0">Responsável</span>
-              <Select value={card.assigneeId || '__none__'} onValueChange={val => onUpdate({ assigneeId: val === '__none__' ? undefined : val })}>
-                <SelectTrigger className="h-8 text-sm flex-1">
-                  <SelectValue placeholder="Nenhum">
-                    {assignee ? (
-                      <span className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={assignee.avatar} />
-                          <AvatarFallback className="text-[9px]">{getInitials(assignee.name)}</AvatarFallback>
-                        </Avatar>
-                        {assignee.name.split(' ')[0]}
-                      </span>
-                    ) : 'Nenhum'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nenhum</SelectItem>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      <span className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={emp.avatar} />
-                          <AvatarFallback className="text-[9px]">{getInitials(emp.name)}</AvatarFallback>
-                        </Avatar>
-                        {emp.name}
-                      </span>
-                    </SelectItem>
+              <AssigneePopover
+                selectedEmployees={assignees}
+                employees={employees}
+                onSelect={(id) => onUpdate({ assigneeId: id, assigneeIds: id ? [id] : [] })}
+                onSelectMultiple={(ids) => onUpdate({ assigneeIds: ids, assigneeId: ids[0] || undefined })}
+                onCreateEmployee={async () => { throw new Error('n/a') }}
+              >
+                <button
+                  type="button"
+                  className="flex flex-wrap gap-1 items-center min-h-8 flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm hover:bg-accent"
+                >
+                  {assignees.length === 0 && <span className="text-muted-foreground text-sm">Nenhum</span>}
+                  {assignees.map(emp => (
+                    <span key={emp.id} className="flex items-center gap-1 bg-primary/10 rounded px-1.5 py-0.5 text-xs">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={emp.avatar} />
+                        <AvatarFallback className="text-[8px]">{getInitials(emp.name)}</AvatarFallback>
+                      </Avatar>
+                      {emp.name.split(' ')[0]}
+                    </span>
                   ))}
-                </SelectContent>
-              </Select>
+                </button>
+              </AssigneePopover>
             </div>
 
             {/* Date Range */}

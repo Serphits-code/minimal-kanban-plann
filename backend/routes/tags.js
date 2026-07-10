@@ -51,6 +51,7 @@ router.post('/', async (req, res) => {
       created_at: new Date().toISOString()
     };
 
+    req.app.get('io').emit('tag:created', newTag);
     res.status(201).json(newTag);
   } catch (error) {
     if (error.code === '23505') {
@@ -77,6 +78,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Tag não encontrada' });
     }
 
+    req.app.get('io').emit('tag:updated', updatedTag);
     res.json(updatedTag);
   } catch (error) {
     if (error.code === '23505') {
@@ -96,6 +98,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Tag não encontrada' });
     }
 
+    req.app.get('io').emit('tag:deleted', { id: req.params.id });
     res.json({ message: 'Tag deletada com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao deletar tag' });

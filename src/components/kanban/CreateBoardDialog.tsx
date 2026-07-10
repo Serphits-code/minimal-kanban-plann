@@ -24,9 +24,9 @@ export function CreateBoardDialog({ onCreateBoard }: CreateBoardDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-1.5 px-2 sm:px-3">
           <Plus size={16} />
-          Novo Quadro
+          <span className="hidden sm:inline">Novo Quadro</span>
         </Button>
       </DialogTrigger>
       <DialogContent>

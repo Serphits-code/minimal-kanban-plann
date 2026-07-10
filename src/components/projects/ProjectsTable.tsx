@@ -206,7 +206,7 @@ export function ProjectsTable({
                         <TableHead className="min-w-[200px]">Tarefa</TableHead>
                         <TableHead className="w-[120px]">Responsável</TableHead>
                         <TableHead className="w-[140px]">Status</TableHead>
-                        <TableHead className="w-[160px]">Per�odo</TableHead>
+                        <TableHead className="w-[160px]">Período</TableHead>
                         <TableHead className="w-[100px]">Prioridade</TableHead>
                         <TableHead className="w-[100px]">Arquivos</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
@@ -278,7 +278,7 @@ export function ProjectsTable({
                     <TableHead className="min-w-[200px]">Tarefa</TableHead>
                     <TableHead className="w-[120px]">Responsável</TableHead>
                     <TableHead className="w-[140px]">Status</TableHead>
-                    <TableHead className="w-[160px]">Per�odo</TableHead>
+                    <TableHead className="w-[160px]">Período</TableHead>
                     <TableHead className="w-[100px]">Prioridade</TableHead>
                     <TableHead className="w-[100px]">Arquivos</TableHead>
                     <TableHead className="w-[50px]"></TableHead>

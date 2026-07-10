@@ -76,6 +76,7 @@ router.post('/', async (req, res) => {
       updated_at: new Date().toISOString()
     };
 
+    req.app.get('io').emit('board:created', newBoard);
     res.status(201).json(newBoard);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao criar board' });
@@ -103,6 +104,7 @@ router.put('/:id', async (req, res) => {
       columns: safeParse(updatedBoard.columns)
     };
 
+    req.app.get('io').emit('board:updated', formattedBoard);
     res.json(formattedBoard);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao atualizar board' });
@@ -118,6 +120,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Board não encontrado' });
     }
 
+    req.app.get('io').emit('board:deleted', { id: req.params.id });
     res.json({ message: 'Board deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao deletar board' });

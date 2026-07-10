@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiClient } from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 import { Board, Card, Tag, Column } from '@/types/kanban';
 import { toast } from 'sonner';
 
@@ -30,6 +31,29 @@ export function useApiBoards() {
 
   useEffect(() => {
     loadBoards();
+  }, []);
+
+  // Real-time sync
+  useEffect(() => {
+    const socket = getSocket();
+    const onCreated = (board: Board) => {
+      setBoards(cur => cur.some(b => b.id === board.id) ? cur : [...cur, { ...board, columns: board.columns || [] }]);
+    };
+    const onUpdated = (board: Board) => {
+      setBoards(cur => cur.map(b => b.id === board.id ? { ...board, columns: board.columns || [] } : b));
+    };
+    const onDeleted = ({ id }: { id: string }) => {
+      setBoards(cur => cur.filter(b => b.id !== id));
+      setActiveBoard(prev => prev === id ? '' : prev);
+    };
+    socket.on('board:created', onCreated);
+    socket.on('board:updated', onUpdated);
+    socket.on('board:deleted', onDeleted);
+    return () => {
+      socket.off('board:created', onCreated);
+      socket.off('board:updated', onUpdated);
+      socket.off('board:deleted', onDeleted);
+    };
   }, []);
 
   const createBoard = async (name: string) => {
@@ -64,13 +88,22 @@ export function useApiBoards() {
       const board = boards.find(b => b.id === boardId);
       if (!board) return;
 
+      // Sort columns to find the last (locked) one
+      const sorted = [...board.columns].sort((a, b) => a.order - b.order);
+      const lastCol = sorted[sorted.length - 1];
+
+      // Insert new column before the last column, shifting its order up
       const newColumn: Column = {
         id: crypto.randomUUID(),
         name,
-        order: board.columns.length
+        order: lastCol ? lastCol.order : board.columns.length
       };
 
-      const updatedColumns = [...board.columns, newColumn];
+      const updatedColumns = board.columns.map(col =>
+        lastCol && col.id === lastCol.id ? { ...col, order: lastCol.order + 1 } : col
+      );
+      updatedColumns.push(newColumn);
+
       await apiClient.updateBoard(boardId, { name: board.name, columns: updatedColumns });
       
       setBoards(current => 
@@ -130,11 +163,17 @@ export function useApiBoards() {
       const board = boards.find(b => b.id === boardId);
       if (!board) return;
 
-      const newColumns = [...board.columns];
+      const sorted = [...board.columns].sort((a, b) => a.order - b.order);
+      const lastIndex = sorted.length - 1;
+
+      // Prevent moving the last (locked) column or dropping onto its position
+      if (sourceIndex === lastIndex || destinationIndex === lastIndex) return;
+
+      const newColumns = [...sorted];
       const [removed] = newColumns.splice(sourceIndex, 1);
       newColumns.splice(destinationIndex, 0, removed);
       
-      // Atualizar ordem
+      // Atualizar ordem (keep last column at its last position)
       const updatedColumns = newColumns.map((col, index) => ({ ...col, order: index }));
       
       await apiClient.updateBoard(boardId, { name: board.name, columns: updatedColumns });
@@ -193,6 +232,43 @@ export function useApiCards(boardId: string) {
   useEffect(() => {
     loadCards();
   }, [boardId]);
+
+  // Real-time sync - use ref so listeners are stable across boardId changes
+  const boardIdRef = useRef(boardId);
+  useEffect(() => { boardIdRef.current = boardId; }, [boardId]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onCreated = (card: Card) => {
+      setAllCards(cur => cur.some(c => c.id === card.id) ? cur : [...cur, card]);
+      if (card.boardId === boardIdRef.current) {
+        setCards(cur => cur.some(c => c.id === card.id) ? cur : [...cur, card]);
+      }
+    };
+    const onUpdatedOrMoved = (card: Card) => {
+      setAllCards(cur => cur.map(c => c.id === card.id ? card : c));
+      setCards(cur => {
+        const exists = cur.some(c => c.id === card.id);
+        if (exists) return cur.map(c => c.id === card.id ? card : c);
+        if (card.boardId === boardIdRef.current) return [...cur, card];
+        return cur.filter(c => c.id !== card.id);
+      });
+    };
+    const onDeleted = ({ id }: { id: string }) => {
+      setCards(cur => cur.filter(c => c.id !== id));
+      setAllCards(cur => cur.filter(c => c.id !== id));
+    };
+    socket.on('card:created', onCreated);
+    socket.on('card:updated', onUpdatedOrMoved);
+    socket.on('card:moved', onUpdatedOrMoved);
+    socket.on('card:deleted', onDeleted);
+    return () => {
+      socket.off('card:created', onCreated);
+      socket.off('card:updated', onUpdatedOrMoved);
+      socket.off('card:moved', onUpdatedOrMoved);
+      socket.off('card:deleted', onDeleted);
+    };
+  }, []);
 
   const getAllCards = () => allCards;
 
@@ -350,6 +426,22 @@ export function useApiTags() {
 
   useEffect(() => {
     loadTags();
+  }, []);
+
+  // Real-time sync
+  useEffect(() => {
+    const socket = getSocket();
+    const onCreated = (tag: Tag) => setTags(cur => cur.some(t => t.id === tag.id) ? cur : [...cur, tag]);
+    const onUpdated = (tag: Tag) => setTags(cur => cur.map(t => t.id === tag.id ? tag : t));
+    const onDeleted = ({ id }: { id: string }) => setTags(cur => cur.filter(t => t.id !== id));
+    socket.on('tag:created', onCreated);
+    socket.on('tag:updated', onUpdated);
+    socket.on('tag:deleted', onDeleted);
+    return () => {
+      socket.off('tag:created', onCreated);
+      socket.off('tag:updated', onUpdated);
+      socket.off('tag:deleted', onDeleted);
+    };
   }, []);
 
   const createTag = async (name: string, color: string) => {

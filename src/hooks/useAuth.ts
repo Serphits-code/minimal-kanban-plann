@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
+import { connectSocket, disconnectSocket } from '@/lib/socket';
+import { subscribeToPush, getPermissionStatus, isPushSupported, hasActivePushSubscription } from '@/lib/notifications';
 
 export interface AuthUser {
   id: string;
@@ -27,6 +29,7 @@ export function useAuth() {
           const freshUser = await apiClient.getMe();
           setUser(freshUser);
           setIsAuthenticated(true);
+          connectSocket(token);
         } catch {
           // Token invalid
           localStorage.removeItem('auth_token');
@@ -46,6 +49,7 @@ export function useAuth() {
     const handleLogout = () => {
       setUser(null);
       setIsAuthenticated(false);
+      disconnectSocket();
     };
 
     window.addEventListener('auth:logout', handleLogout);
@@ -58,6 +62,11 @@ export function useAuth() {
     localStorage.setItem('auth_user', JSON.stringify(result.user));
     setUser(result.user);
     setIsAuthenticated(true);
+    connectSocket(result.token);
+    // Re-subscribe to push if permission was already granted
+    if (isPushSupported() && getPermissionStatus() === 'granted') {
+      hasActivePushSubscription().then(has => { if (!has) subscribeToPush(); });
+    }
     return result.user;
   }, []);
 
@@ -71,6 +80,7 @@ export function useAuth() {
     localStorage.removeItem('auth_user');
     setUser(null);
     setIsAuthenticated(false);
+    disconnectSocket();
   }, []);
 
   const updateProfile = useCallback(async (data: Partial<AuthUser>) => {

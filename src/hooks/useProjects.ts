@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiClient } from '@/lib/api';
+import { getSocket } from '@/lib/socket';
 import { Employee, ProjectGroup } from '@/types/kanban';
 import { toast } from 'sonner';
 
@@ -23,6 +24,22 @@ export function useEmployees() {
 
   useEffect(() => {
     loadEmployees();
+  }, []);
+
+  // Real-time sync
+  useEffect(() => {
+    const socket = getSocket();
+    const onCreated = (emp: Employee) => setEmployees(cur => cur.some(e => e.id === emp.id) ? cur : [...cur, emp]);
+    const onUpdated = (emp: Employee) => setEmployees(cur => cur.map(e => e.id === emp.id ? emp : e));
+    const onDeleted = ({ id }: { id: string }) => setEmployees(cur => cur.filter(e => e.id !== id));
+    socket.on('employee:created', onCreated);
+    socket.on('employee:updated', onUpdated);
+    socket.on('employee:deleted', onDeleted);
+    return () => {
+      socket.off('employee:created', onCreated);
+      socket.off('employee:updated', onUpdated);
+      socket.off('employee:deleted', onDeleted);
+    };
   }, []);
 
   const createEmployee = async (data: Partial<Employee>) => {
@@ -114,6 +131,31 @@ export function useProjectGroups(boardId: string) {
   useEffect(() => {
     loadGroups();
   }, [boardId]);
+
+  // Real-time sync - stable listener with ref
+  const boardIdRef = useRef(boardId);
+  useEffect(() => { boardIdRef.current = boardId; }, [boardId]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const onCreated = (group: ProjectGroup) => {
+      if (group.boardId === boardIdRef.current) {
+        setGroups(cur => cur.some(g => g.id === group.id) ? cur : [...cur, group]);
+      }
+    };
+    const onUpdated = (group: ProjectGroup) => {
+      setGroups(cur => cur.map(g => g.id === group.id ? group : g));
+    };
+    const onDeleted = ({ id }: { id: string }) => setGroups(cur => cur.filter(g => g.id !== id));
+    socket.on('group:created', onCreated);
+    socket.on('group:updated', onUpdated);
+    socket.on('group:deleted', onDeleted);
+    return () => {
+      socket.off('group:created', onCreated);
+      socket.off('group:updated', onUpdated);
+      socket.off('group:deleted', onDeleted);
+    };
+  }, []);
 
   const createGroup = async (name: string, color?: string) => {
     try {

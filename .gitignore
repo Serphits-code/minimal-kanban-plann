@@ -48,3 +48,6 @@ pids
 .devcontainer/
 
 .spark-workbench-id
+
+# VAPID Keys
+backend/.vapid-keys.json

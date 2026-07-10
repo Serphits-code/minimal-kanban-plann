@@ -87,6 +87,7 @@ export interface Card {
   dueDate?: string
   scheduledDate?: string
   scheduledTime?: string
+  scheduledTimeDate?: string // Which day the scheduledTime applies to (for period cards)
   duration?: number // Duration in hours (1, 2, 3, etc.)
   column: string
   boardId: string
@@ -95,7 +96,9 @@ export interface Card {
   createdAt: string
   // New fields for Projects view
   assigneeId?: string
+  assigneeIds?: string[]
   assignee?: Employee
+  assignees?: Employee[]
   priority?: Priority
   status?: TaskStatus
   groupId?: string

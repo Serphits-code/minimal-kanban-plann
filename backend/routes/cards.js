@@ -1,5 +1,6 @@
 import express from 'express';
 import db from '../config/database.js';
+import { sendPushToUsers } from '../lib/pushNotifications.js';
 
 const router = express.Router();
 
@@ -70,8 +71,10 @@ router.get('/', async (req, res) => {
       dueDate: card.due_date,
       scheduledDate: card.scheduled_date,
       scheduledTime: normalizeTime(card.scheduled_time),
+      scheduledTimeDate: card.scheduled_time_date ? card.scheduled_time_date.toISOString().split('T')[0] : null,
       createdAt: card.created_at,
       assigneeId: card.assignee_id,
+      assigneeIds: safeParse(card.assignee_ids, []),
       assignee: card.assignee_id ? {
         id: card.assignee_id,
         name: card.assignee_name,
@@ -110,8 +113,10 @@ router.get('/:id', async (req, res) => {
       dueDate: card.due_date,
       scheduledDate: card.scheduled_date,
       scheduledTime: normalizeTime(card.scheduled_time),
+      scheduledTimeDate: card.scheduled_time_date ? card.scheduled_time_date.toISOString().split('T')[0] : null,
       createdAt: card.created_at,
       assigneeId: card.assignee_id,
+      assigneeIds: safeParse(card.assignee_ids, []),
       priority: card.priority || 'medium',
       status: card.status || 'not_started',
       groupId: card.group_id
@@ -139,6 +144,7 @@ router.post('/', async (req, res) => {
       column, 
       boardId,
       assigneeId,
+      assigneeIds = [],
       priority,
       status,
       groupId
@@ -157,12 +163,16 @@ router.post('/', async (req, res) => {
     const id = crypto.randomUUID();
     const order = maxOrder.max_order + 1;
 
+    // Normalise: assigneeIds wins; fall back to legacy assigneeId
+    const normIds = assigneeIds.length > 0 ? assigneeIds : (assigneeId ? [assigneeId] : []);
+    const primaryId = normIds[0] || null;
+
     await db.query(
       `INSERT INTO cards (
         id, title, description, tags, checklist, attachments, 
         due_date, scheduled_date, scheduled_time, duration,
-        column_id, board_id, order_position, assignee_id, priority, status, group_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        column_id, board_id, order_position, assignee_id, assignee_ids, priority, status, group_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, 
         sanitizeValue(title, ''), 
@@ -175,7 +185,8 @@ router.post('/', async (req, res) => {
         sanitizeValue(scheduledTime, null), 
         sanitizeValue(duration, null),
         column, boardId, order,
-        sanitizeValue(assigneeId, null),
+        primaryId,
+        JSON.stringify(normIds),
         sanitizeValue(priority, 'medium'),
         sanitizeValue(status, 'not_started'),
         sanitizeValue(groupId, null)
@@ -198,11 +209,31 @@ router.post('/', async (req, res) => {
       order,
       completed: false,
       createdAt: new Date().toISOString(),
-      assigneeId: assigneeId || null,
+      assigneeId: primaryId,
+      assigneeIds: normIds,
       priority: priority || 'medium',
       status: status || 'not_started',
       groupId: groupId || null
     };
+
+    req.app.get('io').emit('card:created', newCard);
+
+    // Push notification: notify all assignees on creation
+    if (normIds.length > 0) {
+      db.query(
+        `SELECT u.id as user_id FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = ANY(?)`,
+        [normIds]
+      ).then(rows => {
+        const userIds = rows.map(r => r.user_id);
+        if (userIds.length > 0) {
+          sendPushToUsers(userIds, {
+            title: '📌 Você foi atribuído a uma tarefa',
+            body: title,
+            url: '/',
+          });
+        }
+      }).catch(() => {});
+    }
 
     res.status(201).json(newCard);
   } catch (error) {
@@ -228,24 +259,27 @@ router.put('/:id', async (req, res) => {
       completed,
       boardId,
       assigneeId,
+      assigneeIds,
       priority,
       status,
-      groupId
+      groupId,
+      scheduledTimeDate
     } = req.body;
 
-    // Validação básica
     if (!title && title !== '') {
       return res.status(400).json({ error: 'Título é obrigatório' });
     }
 
-    // Debug log
-    console.log('Updating card with data:', {
-      title, description, tags, checklist, attachments,
-      dueDate, scheduledDate, scheduledTime, duration,
-      column, order, completed, boardId, assigneeId, priority, status, groupId
-    });
+    // Normalise assigneeIds
+    const normIds = Array.isArray(assigneeIds) && assigneeIds.length > 0
+      ? assigneeIds
+      : (assigneeId ? [assigneeId] : []);
+    const primaryId = normIds[0] || null;
 
-    // Prepare sanitized parameters
+    // Capture old assigneeIds for push comparison
+    const [oldCard] = await db.query('SELECT assignee_ids, title FROM cards WHERE id = ?', [req.params.id]);
+    const oldAssigneeIds = oldCard ? safeParse(oldCard.assignee_ids, []) : [];
+
     const params = [
       sanitizeValue(title, ''), 
       sanitizeValue(description, ''), 
@@ -256,25 +290,26 @@ router.put('/:id', async (req, res) => {
       sanitizeDate(scheduledDate), 
       sanitizeValue(scheduledTime, null), 
       sanitizeValue(duration, null),
+      sanitizeDate(scheduledTimeDate),
       sanitizeValue(column, ''), 
       sanitizeValue(order, 0), 
       sanitizeValue(completed, false),
       sanitizeValue(boardId, null),
-      sanitizeValue(assigneeId, null),
+      primaryId,
+      JSON.stringify(normIds),
       sanitizeValue(priority, 'medium'),
       sanitizeValue(status, 'not_started'),
       sanitizeValue(groupId, null),
       req.params.id
     ];
 
-    console.log('Sanitized parameters:', params);
-
     await db.query(
       `UPDATE cards SET 
         title = ?, description = ?, tags = ?, checklist = ?, attachments = ?,
         due_date = ?, scheduled_date = ?, scheduled_time = ?, duration = ?,
+        scheduled_time_date = ?,
         column_id = ?, order_position = ?, completed = ?, board_id = ?,
-        assignee_id = ?, priority = ?, status = ?, group_id = ?
+        assignee_id = ?, assignee_ids = ?, priority = ?, status = ?, group_id = ?
       WHERE id = ?`,
       params
     );
@@ -296,12 +331,37 @@ router.put('/:id', async (req, res) => {
       dueDate: updatedCard.due_date,
       scheduledDate: updatedCard.scheduled_date,
       scheduledTime: normalizeTime(updatedCard.scheduled_time),
+      scheduledTimeDate: updatedCard.scheduled_time_date ? updatedCard.scheduled_time_date.toISOString().split('T')[0] : null,
       createdAt: updatedCard.created_at,
       assigneeId: updatedCard.assignee_id,
+      assigneeIds: safeParse(updatedCard.assignee_ids, []),
       priority: updatedCard.priority || 'medium',
       status: updatedCard.status || 'not_started',
       groupId: updatedCard.group_id
     };
+
+    req.app.get('io').emit('card:updated', formattedCard);
+
+    // Push notification: notify newly added assignees
+    const newlyAdded = normIds.filter(id => !oldAssigneeIds.includes(id));
+    if (newlyAdded.length > 0) {
+      const employees = await db.query(
+        `SELECT e.id as employee_id, u.id as user_id, u.name
+         FROM employees e
+         JOIN users u ON u.id = e.user_id
+         WHERE e.id = ANY(?)`,
+        [newlyAdded]
+      );
+      const userIds = employees.map(e => e.user_id);
+      if (userIds.length > 0) {
+        const cardTitle = oldCard?.title || title || 'um card';
+        sendPushToUsers(userIds, {
+          title: '📌 Você foi atribuído a uma tarefa',
+          body: cardTitle,
+          url: '/',
+        });
+      }
+    }
 
     res.json(formattedCard);
   } catch (error) {
@@ -318,6 +378,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Card não encontrado' });
     }
 
+    req.app.get('io').emit('card:deleted', { id: req.params.id });
     res.json({ message: 'Card deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao deletar card' });
@@ -357,11 +418,13 @@ router.post('/:id/move', async (req, res) => {
       scheduledTime: normalizeTime(updatedCard.scheduled_time),
       createdAt: updatedCard.created_at,
       assigneeId: updatedCard.assignee_id,
+      assigneeIds: safeParse(updatedCard.assignee_ids, []),
       priority: updatedCard.priority || 'medium',
       status: updatedCard.status || 'not_started',
       groupId: updatedCard.group_id
     };
 
+    req.app.get('io').emit('card:moved', formattedCard);
     res.json(formattedCard);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao mover card' });

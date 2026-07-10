@@ -41,7 +41,9 @@ export function ProjectTaskRow({
 }: ProjectTaskRowProps) {
   const [isDragging, setIsDragging] = useState(false)
   
-  const assignee = getEmployeeById(card.assigneeId)
+  const assigneeIds = card.assigneeIds?.length ? card.assigneeIds : (card.assigneeId ? [card.assigneeId] : [])
+  const assignees = assigneeIds.map(id => getEmployeeById(id)).filter(Boolean) as Employee[]
+  const assignee = assignees[0]
   const statusConfig = STATUS_CONFIG[card.status || 'not_started']
   const priorityConfig = PRIORITY_CONFIG[card.priority || 'medium']
 
@@ -126,27 +128,35 @@ export function ProjectTaskRow({
       {/* Assignee */}
       <TableCell className="w-[120px]" onClick={(e) => e.stopPropagation()}>
         <AssigneePopover
-          selectedEmployee={assignee}
+          selectedEmployees={assignees}
           employees={employees}
-          onSelect={(employeeId) => onUpdate({ assigneeId: employeeId })}
+          onSelect={(employeeId) => onUpdate({ assigneeId: employeeId, assigneeIds: employeeId ? [employeeId] : [] })}
+          onSelectMultiple={(ids) => onUpdate({ assigneeIds: ids, assigneeId: ids[0] || undefined })}
           onCreateEmployee={onCreateEmployee}
         >
-          <button className="flex items-center gap-2 hover:bg-muted rounded p-1 w-full">
-            {assignee ? (
-              <>
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={assignee.avatar} />
-                  <AvatarFallback className="text-xs bg-primary/10">
-                    {getInitials(assignee.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm truncate">{assignee.name.split(' ')[0]}</span>
-              </>
+          <button className="flex items-center hover:bg-muted rounded p-1 w-full">
+            {assignees.length > 0 ? (
+              <div className="flex items-center gap-1">
+                <div className="flex -space-x-2">
+                  {assignees.slice(0, 3).map(emp => (
+                    <Avatar key={emp.id} className="h-6 w-6 border-2 border-background">
+                      <AvatarImage src={emp.avatar} />
+                      <AvatarFallback className="text-[9px] bg-primary/10">{getInitials(emp.name)}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {assignees.length > 3 && (
+                    <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[9px] font-medium">
+                      +{assignees.length - 3}
+                    </div>
+                  )}
+                </div>
+                {assignees.length === 1 && (
+                  <span className="text-sm truncate ml-1">{assignees[0].name.split(' ')[0]}</span>
+                )}
+              </div>
             ) : (
               <Avatar className="h-6 w-6">
-                <AvatarFallback className="text-xs bg-muted">
-                  ?
-                </AvatarFallback>
+                <AvatarFallback className="text-xs bg-muted">?</AvatarFallback>
               </Avatar>
             )}
           </button>

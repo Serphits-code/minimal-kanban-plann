@@ -7,10 +7,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AssigneePopover } from '@/components/projects/AssigneePopover'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card as CardType, Tag, ChecklistItem, Attachment, Employee, Priority, TaskStatus, PRIORITY_CONFIG, STATUS_CONFIG, Column, getColumnStatusColor } from '@/types/kanban'
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, X, Calendar as CalendarIcon, Clock, TagSimple as TagIcon, Paperclip, DownloadSimple as Download, FileText, Image, VideoCamera as Video, MusicNote as Music, Eye, User, Flag, Circle } from '@phosphor-icons/react'
+import { Plus, X, Calendar as CalendarIcon, Clock, TagSimple as TagIcon, Paperclip, DownloadSimple as Download, FileText, Image, VideoCamera as Video, MusicNote as Music, Eye, User, Flag, Circle, CircleNotch } from '@phosphor-icons/react'
 import { format } from 'date-fns'
+import { apiClient } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface CardEditorProps {
   card: CardType | null
@@ -20,6 +24,7 @@ interface CardEditorProps {
   onDelete: (cardId: string) => void
   availableTags: Tag[]
   onCreateTag: (name: string, color: string) => Tag
+  onDeleteTag?: (tagId: string) => void
   employees?: Employee[]
   columns?: Column[]
 }
@@ -37,6 +42,7 @@ export function CardEditor({
   onDelete, 
   availableTags,
   onCreateTag,
+  onDeleteTag,
   employees = [],
   columns = []
 }: CardEditorProps) {
@@ -55,7 +61,7 @@ export function CardEditor({
   const [newTagName, setNewTagName] = useState('')
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [assigneeId, setAssigneeId] = useState<string>('')
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [priority, setPriority] = useState<Priority>('medium')
   const [status, setStatus] = useState<TaskStatus>('not_started')
   const [cardColumn, setCardColumn] = useState<string>('')
@@ -74,7 +80,7 @@ export function CardEditor({
       setScheduledTime(card.scheduledTime || '')
       setDuration(card.duration || 1)
       setCompleted(card.completed || false)
-      setAssigneeId(card.assigneeId || '')
+      setAssigneeIds(card.assigneeIds?.length ? card.assigneeIds : (card.assigneeId ? [card.assigneeId] : []))
       setPriority(card.priority || 'medium')
       setStatus(card.status || 'not_started')
       setCardColumn(card.column || '')
@@ -90,7 +96,7 @@ export function CardEditor({
       setScheduledTime('')
       setDuration(1)
       setCompleted(false)
-      setAssigneeId('')
+      setAssigneeIds([])
       setPriority('medium')
       setStatus('not_started')
       setCardColumn('')
@@ -112,7 +118,8 @@ export function CardEditor({
       scheduledTime,
       duration,
       completed,
-      assigneeId: assigneeId || undefined,
+      assigneeId: assigneeIds[0] || undefined,
+      assigneeIds,
       priority,
       status,
       ...(cardColumn ? { column: cardColumn } : {})
@@ -160,41 +167,38 @@ export function CardEditor({
     }
   }
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [uploading, setUploading] = useState(false)
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files) return
 
-    Array.from(files).forEach(file => {
-      // Create object URL for the file
-      const url = URL.createObjectURL(file)
-      
-      const newAttachment: Attachment = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url,
-        createdAt: new Date().toISOString()
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const result = await apiClient.uploadFile(file)
+        const newAttachment: Attachment = {
+          id: crypto.randomUUID(),
+          name: result.name,
+          size: result.size,
+          type: result.type || 'file',
+          url: result.url,
+          createdAt: new Date().toISOString()
+        }
+        setAttachments(current => [...current, newAttachment])
       }
-
-      setAttachments(current => [...current, newAttachment])
-    })
-
-    // Clear the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
   const removeAttachment = (attachmentId: string) => {
-    setAttachments(current => {
-      const attachment = current.find(a => a.id === attachmentId)
-      if (attachment) {
-        // Revoke the object URL to free memory
-        URL.revokeObjectURL(attachment.url)
-      }
-      return current.filter(a => a.id !== attachmentId)
-    })
+    setAttachments(current => current.filter(a => a.id !== attachmentId))
   }
 
   const downloadAttachment = (attachment: Attachment) => {
@@ -236,12 +240,12 @@ export function CardEditor({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col overflow-x-hidden">
+        <DialogContent className="p-4 sm:p-6 w-full max-w-[calc(100vw-1rem)] sm:max-w-4xl max-h-[90dvh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Editar Card</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+          <div className="flex-1 overflow-y-auto space-y-5 -mx-1 px-1">
             <div>
               <label className="text-sm font-medium">Título</label>
               <Input
@@ -279,19 +283,31 @@ export function CardEditor({
                   <User size={14} className="inline mr-1" />
                   Responsável
                 </label>
-                <Select value={assigneeId || '_none'} onValueChange={(val) => setAssigneeId(val === '_none' ? '' : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhum</SelectItem>
-                    {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </SelectItem>
+                <AssigneePopover
+                  selectedEmployees={employees.filter(e => assigneeIds.includes(e.id))}
+                  employees={employees}
+                  onSelect={(id) => setAssigneeIds(id ? [id] : [])}
+                  onSelectMultiple={setAssigneeIds}
+                  onCreateEmployee={async (data) => {
+                    // Fallback: create via API if needed — for now return dummy
+                    throw new Error('Use the ProjectsTable to create employees')
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="flex flex-wrap gap-1 items-center min-h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm hover:bg-accent"
+                  >
+                    {assigneeIds.length === 0 && (
+                      <span className="text-muted-foreground">Selecionar...</span>
+                    )}
+                    {employees.filter(e => assigneeIds.includes(e.id)).map(emp => (
+                      <span key={emp.id} className="flex items-center gap-1 bg-primary/10 rounded px-1.5 py-0.5 text-xs">
+                        {emp.name.split(' ')[0]}
+                        <X size={10} className="cursor-pointer" onClick={(ev) => { ev.stopPropagation(); setAssigneeIds(assigneeIds.filter(id => id !== emp.id)) }} />
+                      </span>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </button>
+                </AssigneePopover>
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">
@@ -376,14 +392,24 @@ export function CardEditor({
                   {availableTags
                     .filter(tag => !selectedTags.find(t => t.id === tag.id))
                     .map(tag => (
-                      <Badge
-                        key={tag.id}
-                        variant="outline"
-                        className="cursor-pointer hover:bg-muted"
-                        onClick={() => toggleTag(tag)}
-                      >
-                        {tag.name}
-                      </Badge>
+                      <div key={tag.id} className="flex items-center gap-0.5">
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer hover:bg-muted"
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tag.name}
+                        </Badge>
+                        {onDeleteTag && (
+                          <button
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            onClick={() => onDeleteTag(tag.id)}
+                            title="Excluir tag"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
                     ))
                   }
                 </div>
@@ -540,11 +566,12 @@ export function CardEditor({
                 />
                 <Button
                   variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                  disabled={uploading}
                   className="gap-2"
                 >
-                  <Paperclip size={14} />
-                  Adicionar Anexo
+                  {uploading ? <CircleNotch size={14} className="animate-spin" /> : <Paperclip size={14} />}
+                  {uploading ? 'Enviando...' : 'Adicionar Anexo'}
                 </Button>
               </div>
             </div>
@@ -597,19 +624,6 @@ export function CardEditor({
                 )}
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Horário de início</label>
-                <div className="flex gap-2 items-center">
-                  <Clock size={16} className="text-muted-foreground flex-shrink-0" />
-                  <Input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="flex-1"
-                    disabled={!scheduledDate}
-                  />
-                </div>
-              </div>
             </div>
           </div>
 

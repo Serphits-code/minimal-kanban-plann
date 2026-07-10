@@ -32,7 +32,7 @@ export function BoardSelector({ boards, activeBoard, onBoardChange, onDeleteBoar
     <>
       <div className="flex items-center gap-2">
         <Select value={activeBoard} onValueChange={onBoardChange}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-32 sm:w-44">
             <SelectValue placeholder="Selecionar quadro" />
           </SelectTrigger>
           <SelectContent>

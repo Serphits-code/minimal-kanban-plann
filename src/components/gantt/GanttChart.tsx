@@ -4,50 +4,63 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { CaretLeft, CaretRight, CalendarBlank, MagnifyingGlass, Flag, User } from '@phosphor-icons/react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { CalendarBlank, MagnifyingGlass, Flag, User } from '@phosphor-icons/react'
 import { format, addDays, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameDay, isToday, addWeeks, subWeeks, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 interface GanttChartProps {
   cards: CardType[]
   employees: Employee[]
+  concludedColumnIds?: string[]
   onEditCard: (card: CardType) => void
 }
 
-type TimeRange = 'week' | 'two-weeks' | 'month'
+type TimeRange = 'week' | 'two-weeks' | 'month' | 'custom'
 
-export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
+export function GanttChart({ cards, employees, concludedColumnIds = [], onEditCard }: GanttChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('two-weeks')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [customStart, setCustomStart] = useState<Date | undefined>(undefined)
+  const [customEnd, setCustomEnd] = useState<Date | undefined>(undefined)
+  const [customPickerOpen, setCustomPickerOpen] = useState(false)
+  const [customStep, setCustomStep] = useState<'start' | 'end'>('start')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAssigneeId, setFilterAssigneeId] = useState<string>('all')
+  const [hideCompleted, setHideCompleted] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Calculate date range based on selected view
   const { startDate, endDate, days } = useMemo(() => {
     let start: Date, end: Date
 
-    switch (timeRange) {
-      case 'week':
-        start = startOfWeek(currentDate, { weekStartsOn: 1 })
-        end = endOfWeek(currentDate, { weekStartsOn: 1 })
-        break
-      case 'two-weeks':
-        start = startOfWeek(currentDate, { weekStartsOn: 1 })
-        end = addDays(start, 13)
-        break
-      case 'month':
-        start = startOfMonth(currentDate)
-        end = endOfMonth(currentDate)
-        break
-      default:
-        start = startOfWeek(currentDate, { weekStartsOn: 1 })
-        end = addDays(start, 13)
+    if (timeRange === 'custom' && customStart && customEnd) {
+      start = customStart
+      end = customEnd > customStart ? customEnd : customStart
+    } else {
+      switch (timeRange) {
+        case 'week':
+          start = startOfWeek(currentDate, { weekStartsOn: 1 })
+          end = endOfWeek(currentDate, { weekStartsOn: 1 })
+          break
+        case 'two-weeks':
+          start = startOfWeek(currentDate, { weekStartsOn: 1 })
+          end = addDays(start, 13)
+          break
+        case 'month':
+          start = startOfMonth(currentDate)
+          end = endOfMonth(currentDate)
+          break
+        default:
+          start = startOfWeek(currentDate, { weekStartsOn: 1 })
+          end = addDays(start, 13)
+      }
     }
 
     const days = eachDayOfInterval({ start, end })
     return { startDate: start, endDate: end, days }
-  }, [currentDate, timeRange])
+  }, [currentDate, timeRange, customStart, customEnd])
 
   // Filter cards that have dates (dueDate or scheduledDate)
   const ganttCards = useMemo(() => {
@@ -55,6 +68,8 @@ export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
       .filter(card => {
         const hasDate = card.dueDate || card.scheduledDate
         if (!hasDate) return false
+        const isConcluded = card.completed || concludedColumnIds.includes(card.column)
+        if (hideCompleted && isConcluded) return false
         if (searchTerm && !card.title.toLowerCase().includes(searchTerm.toLowerCase())) return false
         if (filterAssigneeId !== 'all' && card.assigneeId !== filterAssigneeId) return false
         return true
@@ -64,9 +79,10 @@ export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
         const dateB = new Date(b.scheduledDate || b.dueDate || '')
         return dateA.getTime() - dateB.getTime()
       })
-  }, [cards, searchTerm, filterAssigneeId])
+  }, [cards, searchTerm, filterAssigneeId, hideCompleted])
 
   const navigate = (direction: 'prev' | 'next') => {
+    if (timeRange === 'custom') return
     switch (timeRange) {
       case 'week':
         setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1))
@@ -80,7 +96,7 @@ export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
     }
   }
 
-  const goToToday = () => setCurrentDate(new Date())
+
 
   const getBarPosition = (card: CardType) => {
     const cardStart = new Date(card.scheduledDate || card.dueDate || '')
@@ -124,23 +140,42 @@ export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  const COL_WIDTH = timeRange === 'month' ? 36 : 56
+  const COL_WIDTH = timeRange === 'month' ? 36 : (timeRange === 'custom' && days.length > 30 ? 32 : 56)
+
+  // Label for the current period
+  const periodLabel = useMemo(() => {
+    if (timeRange === 'custom') {
+      if (customStart && customEnd) return `${format(customStart, 'dd/MM/yy')} → ${format(customEnd, 'dd/MM/yy')}`
+      if (customStart) return `${format(customStart, 'dd/MM/yy')} → ?`
+    }
+    return null
+  }, [timeRange, customStart, customEnd])
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b px-4 py-3 bg-card flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <h2 className="font-semibold text-lg">Gráfico de Gantt</h2>
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 sm:px-4 py-2 sm:py-3 bg-card flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-base sm:text-lg">Gráfico de Gantt</h2>
           <Badge variant="secondary" className="text-xs">
             {ganttCards.length} tarefa{ganttCards.length !== 1 ? 's' : ''}
           </Badge>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          {/* Hide completed toggle */}
+          <Button
+            variant={hideCompleted ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-8 text-xs gap-1.5"
+            onClick={() => setHideCompleted(v => !v)}
+          >
+            {hideCompleted ? 'Ocultar concluídos' : 'Mostrar concluídos'}
+          </Button>
+
           {/* Assignee filter */}
           <Select value={filterAssigneeId} onValueChange={setFilterAssigneeId}>
-            <SelectTrigger className="w-[150px] h-8">
+            <SelectTrigger className="w-[130px] h-8 text-xs sm:text-sm">
               <User size={14} className="mr-1 text-muted-foreground" />
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
@@ -160,41 +195,124 @@ export function GanttChart({ cards, employees, onEditCard }: GanttChartProps) {
               placeholder="Buscar tarefa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 pl-8 pr-3 text-sm rounded-md border bg-background w-48 focus:outline-none focus:ring-1 focus:ring-ring"
+              className="h-8 pl-8 pr-3 text-sm rounded-md border bg-background w-36 sm:w-48 focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 
           {/* Time range selector */}
-          <Select value={timeRange} onValueChange={(val: TimeRange) => setTimeRange(val)}>
-            <SelectTrigger className="w-[140px] h-8">
-              <SelectValue />
+          <Select value={timeRange} onValueChange={(val: TimeRange) => {
+            setTimeRange(val)
+            if (val === 'custom') setCustomPickerOpen(true)
+          }}>
+            <SelectTrigger className="w-[130px] sm:w-[150px] h-8 text-xs sm:text-sm">
+              <SelectValue>
+                {timeRange === 'custom' && periodLabel ? periodLabel : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="week">1 Semana</SelectItem>
               <SelectItem value="two-weeks">2 Semanas</SelectItem>
               <SelectItem value="month">Mês</SelectItem>
+              <SelectItem value="custom">Intervalo...</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate('prev')}>
-              <CaretLeft size={16} />
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={goToToday}>
-              Hoje
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigate('next')}>
-              <CaretRight size={16} />
-            </Button>
-          </div>
+          {/* Custom range picker (shown when custom is active) */}
+          {timeRange === 'custom' && (
+            <Popover
+              open={customPickerOpen}
+              onOpenChange={(open) => {
+                setCustomPickerOpen(open)
+                if (open) setCustomStep(customStart ? 'end' : 'start')
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                  <CalendarBlank size={14} />
+                  {periodLabel ?? 'Selecionar datas'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="end">
+                {/* Step indicator */}
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    className={`flex-1 rounded px-2 py-1 text-xs font-medium border transition-colors ${
+                      customStep === 'start'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-transparent'
+                    }`}
+                    onClick={() => setCustomStep('start')}
+                  >
+                    1. Início{customStart ? `: ${format(customStart, 'dd/MM/yy')}` : ''}
+                  </button>
+                  <button
+                    className={`flex-1 rounded px-2 py-1 text-xs font-medium border transition-colors ${
+                      customStep === 'end'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-transparent'
+                    }`}
+                    onClick={() => customStart && setCustomStep('end')}
+                  >
+                    2. Fim{customEnd ? `: ${format(customEnd, 'dd/MM/yy')}` : ''}
+                  </button>
+                </div>
+
+                {customStep === 'start' ? (
+                  <Calendar
+                    mode="single"
+                    selected={customStart}
+                    onSelect={(date) => {
+                      if (!date) return
+                      setCustomStart(date)
+                      setCustomEnd(undefined)
+                      setCustomStep('end')
+                    }}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                ) : (
+                  <Calendar
+                    mode="single"
+                    selected={customEnd}
+                    disabled={customStart ? { before: customStart } : undefined}
+                    onSelect={(date) => {
+                      if (!date) return
+                      setCustomEnd(date)
+                      setCustomPickerOpen(false)
+                    }}
+                    defaultMonth={customStart}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                )}
+
+                {/* Reset */}
+                <div className="flex justify-end mt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 text-muted-foreground"
+                    onClick={() => {
+                      setCustomStart(undefined)
+                      setCustomEnd(undefined)
+                      setCustomStep('start')
+                    }}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
+
         </div>
       </div>
 
       {/* Gantt Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Task List (left side) */}
-        <div className="w-72 min-w-72 border-r flex flex-col bg-card">
+        <div className="w-32 sm:w-56 md:w-72 min-w-[128px] sm:min-w-[224px] md:min-w-[288px] border-r flex flex-col bg-card flex-shrink-0">
           {/* Header */}
           <div className="h-14 border-b flex items-center px-4 bg-muted/30 font-medium text-sm text-muted-foreground flex-shrink-0">
             Tarefas

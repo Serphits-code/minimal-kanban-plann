@@ -1,5 +1,6 @@
 // API client para comunicação com o backend
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
 class ApiClient {
   private getAuthHeader(): Record<string, string> {
@@ -26,11 +27,17 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (response.status === 401) {
-        // Token inválido ou expirado - redirecionar para login
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        window.dispatchEvent(new Event('auth:logout'));
-        throw new Error('Sessão expirada. Faça login novamente.');
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Para endpoints de autenticação (login/register), preservar o erro real
+        const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
+        if (!isAuthEndpoint) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          window.dispatchEvent(new Event('auth:logout'));
+        }
+        
+        throw new Error(errorData.error || 'Sessão expirada. Faça login novamente.');
       }
 
       if (!response.ok) {
@@ -139,12 +146,14 @@ class ApiClient {
       dueDate: data.dueDate || null,
       scheduledDate: data.scheduledDate || null,
       scheduledTime: data.scheduledTime || null,
+      scheduledTimeDate: data.scheduledTimeDate !== undefined ? data.scheduledTimeDate : null,
       duration: data.duration || null,
       column: data.column || '',
       order: data.order || 0,
       completed: data.completed || false,
       boardId: data.boardId,
       assigneeId: data.assigneeId !== undefined ? data.assigneeId : null,
+      assigneeIds: data.assigneeIds !== undefined ? data.assigneeIds : [],
       priority: data.priority || 'medium',
       status: data.status || 'not_started',
       groupId: data.groupId !== undefined ? data.groupId : null,
@@ -167,6 +176,33 @@ class ApiClient {
       method: 'POST',
       body: { newColumn, newOrder },
     });
+  }
+
+  async uploadFile(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = `${API_BASE_URL}/upload`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { ...this.getAuthHeader() },
+      body: formData,
+    });
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.dispatchEvent(new Event('auth:logout'));
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Erro ao fazer upload' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+    const result = await response.json();
+    // Convert relative URL to absolute backend URL
+    if (result.url && result.url.startsWith('/')) {
+      result.url = `${BACKEND_BASE_URL}${result.url}`;
+    }
+    return result;
   }
 
   // Tags
@@ -253,6 +289,31 @@ class ApiClient {
 
   async deleteProjectGroup(id) {
     return this.request(`/project-groups/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Recurring Tasks
+  async getRecurringTasks() {
+    return this.request('/recurring-tasks');
+  }
+
+  async createRecurringTask(data: { title: string; description: string; dayOfMonth: number }) {
+    return this.request('/recurring-tasks', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  async updateRecurringTask(id: string, data: { title?: string; description?: string; dayOfMonth?: number; active?: boolean }) {
+    return this.request(`/recurring-tasks/${id}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  async deleteRecurringTask(id: string) {
+    return this.request(`/recurring-tasks/${id}`, {
       method: 'DELETE',
     });
   }

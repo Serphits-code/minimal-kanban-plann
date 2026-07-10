@@ -16,9 +16,12 @@ import {
   FileDoc,
   FilePdf,
   Trash,
-  CloudArrowUp
+  CloudArrowUp,
+  CircleNotch
 } from '@phosphor-icons/react'
 import { Separator } from '@/components/ui/separator'
+import { apiClient } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface FilePopoverProps {
   children: React.ReactNode
@@ -37,6 +40,7 @@ export function FilePopover({
   const [isAddingLink, setIsAddingLink] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
   const [linkName, setLinkName] = useState('')
+  const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddLink = () => {
@@ -57,29 +61,31 @@ export function FilePopover({
     setIsAddingLink(false)
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    Array.from(files).forEach(file => {
-      // For now, we'll create a blob URL - in production this would upload to server
-      const url = URL.createObjectURL(file)
-      
-      const attachment: Attachment = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        url: url,
-        type: file.type || 'file',
-        size: file.size,
-        createdAt: new Date().toISOString()
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const result = await apiClient.uploadFile(file)
+        const attachment: Attachment = {
+          id: crypto.randomUUID(),
+          name: result.name,
+          url: result.url,
+          type: result.type || 'file',
+          size: result.size,
+          createdAt: new Date().toISOString()
+        }
+        onAddAttachment(attachment)
       }
-      
-      onAddAttachment(attachment)
-    })
-
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    } catch (error: any) {
+      toast.error('Erro ao fazer upload: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -192,11 +198,12 @@ export function FilePopover({
               />
               
               <button
-                className="flex items-center gap-2 w-full p-2 hover:bg-primary/10 bg-primary/5 text-primary rounded-lg transition-colors text-sm font-medium"
-                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 w-full p-2 hover:bg-primary/10 bg-primary/5 text-primary rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                disabled={uploading}
               >
-                <Desktop size={16} />
-                A partir do Computador
+                {uploading ? <CircleNotch size={16} className="animate-spin" /> : <Desktop size={16} />}
+                {uploading ? 'Enviando...' : 'A partir do Computador'}
               </button>
               
               <button

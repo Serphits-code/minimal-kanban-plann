@@ -35,8 +35,10 @@ export function KanbanCard({
   const imageAttachments = card.attachments?.filter(att => att.type.startsWith('image/')) || []
   const otherAttachments = card.attachments?.filter(att => !att.type.startsWith('image/')) || []
 
-  // Resolve assignee from card.assignee or employees list
-  const assignee = card.assignee || (card.assigneeId ? employees.find(e => e.id === card.assigneeId) : null)
+  // Resolve assignees from card.assigneeIds or legacy assigneeId
+  const assigneeIds = card.assigneeIds?.length ? card.assigneeIds : (card.assigneeId ? [card.assigneeId] : [])
+  const assignees = assigneeIds.map(id => employees.find(e => e.id === id)).filter(Boolean) as Employee[]
+  const assignee = card.assignee || assignees[0] || null
   const priorityConfig = card.priority ? PRIORITY_CONFIG[card.priority] : null
   const statusConfig = card.status ? STATUS_CONFIG[card.status] : null
 
@@ -237,20 +239,29 @@ export function KanbanCard({
                 </div>
               )}
 
-              {/* Assignee avatar */}
-              {assignee && (
+              {/* Assignee avatars */}
+              {assignees.length > 0 && (
                 <TooltipProvider delayDuration={200}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-medium text-primary border border-primary/20 ml-1">
-                        {assignee.avatar ? (
-                          <img src={assignee.avatar} alt={assignee.name} className="w-6 h-6 rounded-full object-cover" />
-                        ) : (
-                          getInitials(assignee.name)
+                      <div className="flex -space-x-1.5 ml-1">
+                        {assignees.slice(0, 3).map(emp => (
+                          <div key={emp.id} className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[9px] font-medium text-primary border border-primary/20 flex-shrink-0">
+                            {emp.avatar ? (
+                              <img src={emp.avatar} alt={emp.name} className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                              getInitials(emp.name)
+                            )}
+                          </div>
+                        ))}
+                        {assignees.length > 3 && (
+                          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[9px] font-medium border border-background">
+                            +{assignees.length - 3}
+                          </div>
                         )}
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent>{assignee.name}</TooltipContent>
+                    <TooltipContent>{assignees.map(e => e.name).join(', ')}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}

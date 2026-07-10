@@ -2,8 +2,9 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import { Column } from '@/types/kanban'
-import { Plus, Pencil, Trash, DotsNine } from '@phosphor-icons/react'
+import { Plus, Pencil, Trash, DotsNine, Lock } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 
 interface ColumnEditorProps {
@@ -52,7 +53,15 @@ export function ColumnEditor({
     toast.success('Coluna excluída!')
   }
 
+  const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
+  const lastColumnId = sortedColumns[sortedColumns.length - 1]?.id
+
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    // The last column (Concluído) cannot be moved
+    if (sortedColumns[index]?.id === lastColumnId) {
+      e.preventDefault()
+      return
+    }
     setDraggedItem(index)
     e.dataTransfer.effectAllowed = 'move'
   }
@@ -64,13 +73,13 @@ export function ColumnEditor({
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
-    if (draggedItem !== null && draggedItem !== dropIndex) {
+    const lastIndex = sortedColumns.length - 1
+    // Prevent any operation that involves the last column position
+    if (draggedItem !== null && draggedItem !== dropIndex && dropIndex !== lastIndex) {
       onReorderColumns(draggedItem, dropIndex)
     }
     setDraggedItem(null)
   }
-
-  const sortedColumns = [...columns].sort((a, b) => a.order - b.order)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -96,65 +105,74 @@ export function ColumnEditor({
           {/* Existing columns */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Colunas existentes:</h4>
-            {sortedColumns.map((column, index) => (
-              <div
-                key={column.id}
-                className={`flex items-center gap-2 p-2 border rounded-lg ${
-                  draggedItem === index ? 'opacity-50' : ''
-                }`}
-                draggable
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, index)}
-              >
-                <DotsNine size={16} className="text-muted-foreground cursor-grab" />
-                
-                {editingColumn === column.id ? (
-                  <div className="flex-1 flex gap-2">
-                    <Input
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleUpdateColumn(column.id)
-                        if (e.key === 'Escape') {
-                          setEditingColumn(null)
-                          setEditingName('')
-                        }
-                      }}
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => handleUpdateColumn(column.id)}
-                    >
-                      Salvar
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="flex-1">{column.name}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingColumn(column.id)
-                        setEditingName(column.name)
-                      }}
-                    >
-                      <Pencil size={14} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDeleteColumn(column.id)}
-                      disabled={columns.length <= 1}
-                    >
-                      <Trash size={14} />
-                    </Button>
-                  </>
-                )}
-              </div>
-            ))}
+            {sortedColumns.map((column, index) => {
+              const isLocked = column.id === lastColumnId
+              return (
+                <div
+                  key={column.id}
+                  className={`flex items-center gap-2 p-2 border rounded-lg ${
+                    draggedItem === index ? 'opacity-50' : ''
+                  } ${isLocked ? 'bg-muted/50' : ''}`}
+                  draggable={!isLocked}
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                >
+                  {isLocked
+                    ? <Lock size={16} className="text-muted-foreground" />
+                    : <DotsNine size={16} className="text-muted-foreground cursor-grab" />
+                  }
+
+                  {editingColumn === column.id ? (
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateColumn(column.id)
+                          if (e.key === 'Escape') {
+                            setEditingColumn(null)
+                            setEditingName('')
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" onClick={() => handleUpdateColumn(column.id)}>
+                        Salvar
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex-1">{column.name}</span>
+                      {isLocked ? (
+                        <Badge variant="secondary" className="text-xs">Fixa</Badge>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setEditingColumn(column.id)
+                              setEditingName(column.name)
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteColumn(column.id)}
+                            disabled={columns.length <= 1}
+                          >
+                            <Trash size={14} />
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           <div className="flex justify-end">

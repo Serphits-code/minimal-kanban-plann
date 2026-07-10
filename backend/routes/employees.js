@@ -76,6 +76,7 @@ router.post('/', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
+    req.app.get('io').emit('employee:created', newEmployee);
     res.status(201).json(newEmployee);
   } catch (error) {
     console.error('Erro ao criar funcionário:', error);
@@ -113,6 +114,7 @@ router.put('/:id', async (req, res) => {
       createdAt: updatedEmployee.created_at
     };
 
+    req.app.get('io').emit('employee:updated', formattedEmployee);
     res.json(formattedEmployee);
   } catch (error) {
     console.error('Erro ao atualizar funcionário:', error);
@@ -129,6 +131,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Funcionário não encontrado' });
     }
 
+    req.app.get('io').emit('employee:deleted', { id: req.params.id });
     res.json({ message: 'Funcionário deletado com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar funcionário:', error);

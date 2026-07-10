@@ -90,3 +90,40 @@ body {
 html.dark body {
   background-color: #1f1f1f !important;
 }
+
+/* Hide scrollbar utility */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Welcome page greeting shimmer */
+.welcome-shimmer {
+  background: linear-gradient(
+    135deg,
+    oklch(0.5 0.15 230 / 0.06) 0%,
+    oklch(0.6 0.15 140 / 0.08) 50%,
+    oklch(0.5 0.15 230 / 0.04) 100%
+  );
+  background-size: 200% 200%;
+  animation: shimmer-move 6s ease-in-out infinite;
+  border: 1px solid var(--border);
+}
+
+.dark .welcome-shimmer {
+  background: linear-gradient(
+    135deg,
+    oklch(0.6 0.15 230 / 0.1) 0%,
+    oklch(0.7 0.15 140 / 0.12) 50%,
+    oklch(0.6 0.15 230 / 0.06) 100%
+  );
+  background-size: 200% 200%;
+}
+
+@keyframes shimmer-move {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}

@@ -93,6 +93,7 @@ router.post('/', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
+    req.app.get('io').emit('group:created', newGroup);
     res.status(201).json(newGroup);
   } catch (error) {
     console.error('Erro ao criar grupo:', error);
@@ -129,6 +130,7 @@ router.put('/:id', async (req, res) => {
       createdAt: updatedGroup.created_at
     };
 
+    req.app.get('io').emit('group:updated', formattedGroup);
     res.json(formattedGroup);
   } catch (error) {
     console.error('Erro ao atualizar grupo:', error);
@@ -145,6 +147,7 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Grupo não encontrado' });
     }
 
+    req.app.get('io').emit('group:deleted', { id: req.params.id });
     res.json({ message: 'Grupo deletado com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar grupo:', error);
